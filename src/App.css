@@ -345,8 +345,9 @@
   margin: 12px 0;
 }
 
-.blank-line {
+[data-blank-line] {
   height: 16px;
+  display: block;
 }
 
 @media (max-width: 900px) {

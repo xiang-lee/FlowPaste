@@ -61,12 +61,7 @@ const fullUserTemplate = (text: string) =>
 ${text}`;
 
 const LONG_TEXT_THRESHOLD = 8000;
-const isLocal =
-  typeof window !== 'undefined' &&
-  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-const BASE_URL =
-  (import.meta.env.DEV || isLocal ? '/api' : import.meta.env.VITE_AI_BUILDER_BASE_URL) ||
-  'https://space.ai-builders.com/backend';
+const BASE_URL = '/api';
 const TOKEN = import.meta.env.VITE_AI_BUILDER_TOKEN;
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -134,9 +129,8 @@ export default function App() {
   }, [selection]);
 
   const baseHeaders = useMemo(() => {
-    const headers: Record<string, string> = {
-      Authorization: `Bearer ${TOKEN ?? ''}`,
-    };
+    const headers: Record<string, string> = {};
+    if (TOKEN) headers.Authorization = `Bearer ${TOKEN}`;
     return headers;
   }, []);
 
