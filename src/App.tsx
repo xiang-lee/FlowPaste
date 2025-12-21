@@ -115,7 +115,7 @@ export default function App() {
     return savedId || '';
   });
 
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
 
   // Initialize text based on currentArticleId or default
   const [text, setText] = useState(() => {

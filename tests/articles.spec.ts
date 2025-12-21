@@ -16,6 +16,9 @@ test.describe('Article Management', () => {
   });
 
   test('Sidebar: Create new article', async ({ page }) => {
+    // Open sidebar first
+    await page.getByTitle('展开').click();
+    
     const editor = page.getByTestId('editor');
     await editor.fill('First article');
     
@@ -32,6 +35,9 @@ test.describe('Article Management', () => {
   });
 
   test('Sidebar: Switch between articles', async ({ page }) => {
+    // Open sidebar first
+    await page.getByTitle('展开').click();
+    
     const editor = page.getByTestId('editor');
     
     // Edit first
@@ -54,6 +60,9 @@ test.describe('Article Management', () => {
   });
 
   test('Sidebar: Delete article', async ({ page }) => {
+    // Open sidebar first
+    await page.getByTitle('展开').click();
+    
     // Need at least 2 articles to delete one (logic constraint)
     const editor = page.getByTestId('editor');
     await editor.fill('To keep');
@@ -75,15 +84,15 @@ test.describe('Article Management', () => {
 
   test('Sidebar: Collapse toggle', async ({ page }) => {
     const sidebar = page.locator('.sidebar');
-    const toggle = page.getByTitle('收起'); // Initial state title is "收起"
+    const toggle = page.getByTitle('展开'); // Initial state title is "展开" because it starts collapsed
     
-    await expect(sidebar).not.toHaveClass(/collapsed/);
-    
-    await toggle.click();
     await expect(sidebar).toHaveClass(/collapsed/);
     
-    const expandToggle = page.getByTitle('展开');
-    await expandToggle.click();
+    await toggle.click();
     await expect(sidebar).not.toHaveClass(/collapsed/);
+    
+    const collapseToggle = page.getByTitle('收起');
+    await collapseToggle.click();
+    await expect(sidebar).toHaveClass(/collapsed/);
   });
 });
