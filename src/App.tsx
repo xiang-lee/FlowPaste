@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import TurndownService from 'turndown';
 import { marked } from 'marked';
+import './App.css';
 
 const injectBlankPlaceholders = (md: string) =>
   md.replace(/\n{3,}/g, (match) => {
@@ -25,7 +26,6 @@ const sanitizeModelText = (raw: string) => {
   }
   return t.trim();
 };
-import './App.css';
 
 type RecordingState = 'idle' | 'recording' | 'transcribing' | 'error';
 type ActionType = 'fix' | 'polish';
@@ -36,6 +36,13 @@ type Toast = {
   message: string;
   kind: ToastKind;
   action?: { label: string; onClick: () => void };
+};
+
+type Article = {
+  id: string;
+  title: string;
+  content: string;
+  updatedAt: number;
 };
 
 const FIX_SYSTEM_PROMPT = `你是一个严格克制的文字修正器。你的任务是把用户文本中的错别字、明显语法问题、标点与分段做最小必要修正。
@@ -89,7 +96,48 @@ function useToast() {
 }
 
 export default function App() {
-  const [text, setText] = useState('');
+  // --- Article State ---
+  const [articles, setArticles] = useState<Article[]>(() => {
+    const saved = localStorage.getItem('flowpaste_articles');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) {
+        console.error('Failed to parse articles', e);
+      }
+    }
+    return [{ id: Date.now().toString(), title: 'Untitled', content: '', updatedAt: Date.now() }];
+  });
+
+  const [currentArticleId, setCurrentArticleId] = useState<string>(() => {
+    const savedId = localStorage.getItem('flowpaste_current_id');
+    return savedId || '';
+  });
+
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  // Initialize text based on currentArticleId or default
+  const [text, setText] = useState(() => {
+    const savedId = localStorage.getItem('flowpaste_current_id');
+    const savedArticlesStr = localStorage.getItem('flowpaste_articles');
+    let initialText = '';
+    
+    if (savedArticlesStr) {
+        try {
+            const savedArticles = JSON.parse(savedArticlesStr);
+            const targetId = savedId || (savedArticles.length > 0 ? savedArticles[0].id : null);
+            const article = savedArticles.find((a: Article) => a.id === targetId);
+            if (article) {
+                initialText = article.content;
+            } else if (savedArticles.length > 0) {
+                initialText = savedArticles[0].content;
+            }
+        } catch {}
+    }
+    return initialText;
+  });
+
   const [selection, setSelection] = useState({ start: 0, end: 0 });
   const [undoSnapshot, setUndoSnapshot] = useState<string | null>(null);
   const [focusMode, setFocusMode] = useState(false);
@@ -120,13 +168,104 @@ export default function App() {
 
   const { toast, setToast } = useToast();
 
+  // Validate currentArticleId on mount
   useEffect(() => {
-    if (textareaRef.current) textareaRef.current.focus();
+    if (!articles.find(a => a.id === currentArticleId)) {
+      if (articles.length > 0) {
+        setCurrentArticleId(articles[0].id);
+        setText(articles[0].content);
+      } else {
+         // Should ideally not happen due to initial state, but for safety
+         const newId = Date.now().toString();
+         setArticles([{ id: newId, title: 'Untitled', content: '', updatedAt: Date.now() }]);
+         setCurrentArticleId(newId);
+         setText('');
+      }
+    }
   }, []);
+
+  useEffect(() => {
+    if (textareaRef.current && !sidebarCollapsed) textareaRef.current.focus();
+  }, [currentArticleId]);
 
   useEffect(() => {
     lastCursorRef.current = selection;
   }, [selection]);
+
+  // Sync text to current article in the list
+  useEffect(() => {
+    setArticles(prev => {
+      const idx = prev.findIndex(a => a.id === currentArticleId);
+      if (idx === -1) return prev;
+      
+      // If content hasn't changed, don't update (avoids unnecessary re-renders/saves)
+      if (prev[idx].content === text) return prev;
+
+      const titleLine = text.trim().split('\n')[0] || 'Untitled';
+      const newTitle = titleLine.length > 40 ? titleLine.slice(0, 40) + '...' : titleLine;
+
+      const updatedArticle = { 
+        ...prev[idx], 
+        content: text, 
+        title: newTitle || 'Untitled',
+        updatedAt: Date.now() 
+      };
+      
+      const newArticles = [...prev];
+      newArticles[idx] = updatedArticle;
+      return newArticles;
+    });
+  }, [text, currentArticleId]);
+
+  // Persistence
+  useEffect(() => {
+    localStorage.setItem('flowpaste_articles', JSON.stringify(articles));
+  }, [articles]);
+
+  useEffect(() => {
+    localStorage.setItem('flowpaste_current_id', currentArticleId);
+  }, [currentArticleId]);
+
+  const handleNewArticle = () => {
+    const newId = Date.now().toString();
+    const newArticle: Article = { id: newId, title: 'Untitled', content: '', updatedAt: Date.now() };
+    setArticles(prev => [newArticle, ...prev]);
+    setCurrentArticleId(newId);
+    setText('');
+    if (window.innerWidth < 900) {
+        setSidebarCollapsed(true);
+    }
+  };
+
+  const handleSelectArticle = (id: string) => {
+    if (id === currentArticleId) return;
+    const article = articles.find(a => a.id === id);
+    if (article) {
+      setCurrentArticleId(id);
+      setText(article.content);
+      if (window.innerWidth < 900) {
+        setSidebarCollapsed(true);
+      }
+    }
+  };
+
+  const handleDeleteArticle = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    if (articles.length <= 1) {
+      showToast('至少保留一篇文章', 'error');
+      return;
+    }
+    if (!window.confirm('确定删除这篇文章吗？')) return;
+
+    const newArticles = articles.filter(a => a.id !== id);
+    setArticles(newArticles);
+
+    if (currentArticleId === id) {
+      const next = newArticles[0];
+      setCurrentArticleId(next.id);
+      setText(next.content);
+    }
+  };
 
   const baseHeaders = useMemo(() => {
     const headers: Record<string, string> = {};
@@ -481,137 +620,181 @@ export default function App() {
 
   return (
     <div className={`app-shell ${focusMode ? 'focus' : ''}`}>
-      <header className="hero">
-        <div className="hero-text">
-          <p className="eyebrow">FlowPaste · 口述到发布一页闭环</p>
-          <h1>语音连续输出，一键 Fix / Polish，永不丢稿。</h1>
-          <p className="subline">录音→转写→克制修正→润色→撤销，全部在同一屏完成，无需外部 copy/paste。</p>
+      {/* Sidebar */}
+      <aside className={`sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}>
+        <div className="sidebar-header">
+          <button className="btn primary small" onClick={handleNewArticle}>
+            + 新建
+          </button>
+          <button 
+            className="btn ghost icon-only" 
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            title={sidebarCollapsed ? "展开" : "收起"}
+          >
+            {sidebarCollapsed ? '»' : '«'}
+          </button>
         </div>
-      </header>
-
-      <main className="editor-wrap">
-        {viewMode === 'markdown' ? (
-          <textarea
-            ref={textareaRef}
-            data-testid="editor"
-            className="editor"
-            value={text}
-            placeholder="开始口述或粘贴你的 Markdown 草稿；录音结束会自动插入转写。选中段落后点击 Fix/Polish 直接替换。"
-            onChange={(e) => setText(e.target.value)}
-            onSelect={updateSelectionFromTextarea}
-            onKeyUp={updateSelectionFromTextarea}
-            onMouseUp={updateSelectionFromTextarea}
-          />
-        ) : (
-          <div className="preview-pane" data-testid="wysiwyg-pane">
-            <div className="preview-head">所见编辑（可直接修改，自动同步 Markdown）</div>
-            <div
-              className="wysiwyg"
-              data-testid="wysiwyg-editor"
-              ref={wysiwygRef}
-              contentEditable
-              suppressContentEditableWarning
-              onInput={(e) => {
-                isWysiwygInputRef.current = true;
-                const html = (e.currentTarget as HTMLDivElement).innerHTML;
-                const md = turndown.turndown(html || '');
-                if (import.meta.env.DEV) {
-                  console.debug('[wysiwyg input]', { htmlSnippet: html.slice(0, 80), mdSnippet: md.slice(0, 80) });
-                }
-                setText(md);
-                requestAnimationFrame(() => {
-                  isWysiwygInputRef.current = false;
-                });
-              }}
-            />
+        
+        {!sidebarCollapsed && (
+          <div className="article-list"> 
+             {articles.map(article => (
+               <div 
+                  key={article.id} 
+                  className={`article-item ${article.id === currentArticleId ? 'active' : ''}`}
+                  onClick={() => handleSelectArticle(article.id)}
+               >
+                 <div className="article-title">{article.title || 'Untitled'}</div>
+                 <div className="article-date">
+                    {new Date(article.updatedAt).toLocaleString(undefined, {
+                      month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                    })}
+                 </div>
+                 <button 
+                    className="delete-btn" 
+                    onClick={(e) => handleDeleteArticle(e, article.id)}
+                    title="删除"
+                 >
+                   ×
+                 </button>
+               </div>
+             ))}
           </div>
         )}
-      </main>
+      </aside>
 
-      <div className="toolbar">
-        <div className="btn-group">
-          <button
-            data-testid="record-button"
-            className={`btn primary ${recordingState !== 'idle' ? 'active' : ''}`}
-            onClick={recordingState === 'recording' ? handleStopRecording : handleStartRecording}
-          >
-            {renderRecordLabel()}
-          </button>
-          {recordingState === 'recording' && (
-            <button className="btn ghost" onClick={handleStopRecording}>
-              停止
-            </button>
+      <div className="main-content">
+        <header className="hero">
+          <div className="hero-text">
+            <p className="eyebrow">FlowPaste · 口述到发布一页闭环</p>
+            <h1>语音连续输出，一键 Fix / Polish，永不丢稿。</h1>
+            <p className="subline">录音→转写→克制修正→润色→撤销，全部在同一屏完成，无需外部 copy/paste。</p>
+          </div>
+        </header>
+
+        <main className="editor-wrap">
+          {viewMode === 'markdown' ? (
+            <textarea
+              ref={textareaRef}
+              data-testid="editor"
+              className="editor"
+              value={text}
+              placeholder="开始口述或粘贴你的 Markdown 草稿；录音结束会自动插入转写。选中段落后点击 Fix/Polish 直接替换。"
+              onChange={(e) => setText(e.target.value)}
+              onSelect={updateSelectionFromTextarea}
+              onKeyUp={updateSelectionFromTextarea}
+              onMouseUp={updateSelectionFromTextarea}
+            />
+          ) : (
+            <div className="preview-pane" data-testid="wysiwyg-pane">
+              <div className="preview-head">所见编辑（可直接修改，自动同步 Markdown）</div>
+              <div
+                className="wysiwyg"
+                data-testid="wysiwyg-editor"
+                ref={wysiwygRef}
+                contentEditable
+                suppressContentEditableWarning
+                onInput={(e) => {
+                  isWysiwygInputRef.current = true;
+                  const html = (e.currentTarget as HTMLDivElement).innerHTML;
+                  const md = turndown.turndown(html || '');
+                  if (import.meta.env.DEV) {
+                    console.debug('[wysiwyg input]', { htmlSnippet: html.slice(0, 80), mdSnippet: md.slice(0, 80) });
+                  }
+                  setText(md);
+                  requestAnimationFrame(() => {
+                    isWysiwygInputRef.current = false;
+                  });
+                }}
+              />
+            </div>
           )}
-          {recordingState === 'transcribing' && (
-            <button className="btn ghost" onClick={handleStopRecording}>
-              取消转写
+        </main>
+
+        <div className="toolbar">
+          <div className="btn-group">
+            <button
+              data-testid="record-button"
+              className={`btn primary ${recordingState !== 'idle' ? 'active' : ''}`}
+              onClick={recordingState === 'recording' ? handleStopRecording : handleStartRecording}
+            >
+              {renderRecordLabel()}
             </button>
-          )}
-        </div>
+            {recordingState === 'recording' && (
+              <button className="btn ghost" onClick={handleStopRecording}>
+                停止
+              </button>
+            )}
+            {recordingState === 'transcribing' && (
+              <button className="btn ghost" onClick={handleStopRecording}>
+                取消转写
+              </button>
+            )}
+          </div>
 
-        <div className="btn-group">
-          <button
-            data-testid="fix-button"
-            className="btn"
-            onClick={() => runTextAction('fix')}
-          >
-            {activeAction === 'fix' && actionState === 'processing' ? 'Fix 中…(点击取消)' : 'Fix'}
-          </button>
-          <button
-            data-testid="polish-button"
-            className="btn"
-            onClick={() => runTextAction('polish')}
-          >
-            {activeAction === 'polish' && actionState === 'processing' ? 'Polish 中…(点击取消)' : 'Polish'}
-          </button>
-        </div>
+          <div className="btn-group">
+            <button
+              data-testid="fix-button"
+              className="btn"
+              onClick={() => runTextAction('fix')}
+            >
+              {activeAction === 'fix' && actionState === 'processing' ? 'Fix 中…(点击取消)' : 'Fix'}
+            </button>
+            <button
+              data-testid="polish-button"
+              className="btn"
+              onClick={() => runTextAction('polish')}
+            >
+              {activeAction === 'polish' && actionState === 'processing' ? 'Polish 中…(点击取消)' : 'Polish'}
+            </button>
+          </div>
 
-        <div className="btn-group">
-          <button
-            className={`btn ghost ${viewMode === 'markdown' ? 'active' : ''}`}
-            onClick={() => setViewMode('markdown')}
-          >
-            Markdown
-          </button>
-          <button
-            className={`btn ghost ${viewMode === 'wysiwyg' ? 'active' : ''}`}
-            onClick={() => setViewMode('wysiwyg')}
-          >
-            所见编辑
-          </button>
-        </div>
+          <div className="btn-group">
+            <button
+              className={`btn ghost ${viewMode === 'markdown' ? 'active' : ''}`}
+              onClick={() => setViewMode('markdown')}
+            >
+              Markdown
+            </button>
+            <button
+              className={`btn ghost ${viewMode === 'wysiwyg' ? 'active' : ''}`}
+              onClick={() => setViewMode('wysiwyg')}
+            >
+              所见编辑
+            </button>
+          </div>
 
-        <div className="btn-group">
-          <button
-            data-testid="undo-button"
-            className={`btn ${undoSnapshot ? '' : 'disabled'}`}
-            disabled={!undoSnapshot}
-            onClick={handleUndo}
-          >
-            撤销
-          </button>
-          <button className="btn ghost" onClick={() => setFocusMode((v) => !v)} data-testid="focus-button">
-            {focusMode ? '退出专注' : '专注模式'}
-          </button>
-        </div>
+          <div className="btn-group">
+            <button
+              data-testid="undo-button"
+              className={`btn ${undoSnapshot ? '' : 'disabled'}`}
+              disabled={!undoSnapshot}
+              onClick={handleUndo}
+            >
+              撤销
+            </button>
+            <button className="btn ghost" onClick={() => setFocusMode((v) => !v)} data-testid="focus-button">
+              {focusMode ? '退出专注' : '专注模式'}
+            </button>
+          </div>
 
-        <div className="status">
-          <span className="dot" data-testid="recording-status" aria-label={recordingState} />
-          <span>
-            {recordingState === 'recording'
-              ? '录音中'
-              : recordingState === 'transcribing'
-                ? '转写中'
-                : recordingState === 'error'
-                  ? '录音失败，可重试'
-                  : '空闲'}
-          </span>
-          {liveStatusText() && (
-            <span className="live-chip">
-              <span className="spinner" aria-hidden="true" />
-              {liveStatusText()}
+          <div className="status">
+            <span className="dot" data-testid="recording-status" aria-label={recordingState} />
+            <span>
+              {recordingState === 'recording'
+                ? '录音中'
+                : recordingState === 'transcribing'
+                  ? '转写中'
+                  : recordingState === 'error'
+                    ? '录音失败，可重试'
+                    : '空闲'}
             </span>
-          )}
+            {liveStatusText() && (
+              <span className="live-chip">
+                <span className="spinner" aria-hidden="true" />
+                {liveStatusText()}
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
