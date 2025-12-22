@@ -17,14 +17,36 @@ const renderMarkdownToHtml = (md: string) => {
 
 const sanitizeModelText = (raw: string) => {
   let t = raw.trim();
+  // 移除开头和结尾的引号
   t = t.replace(/^["'“”]+|["'“”]+$/g, '');
-  const bannedPrefixes = ['Note:', 'note:', '备注：', '说明：', 'Silently', 'silently'];
-  for (let i = 0; i < 3; i += 1) {
-    if (bannedPrefixes.some((p) => t.startsWith(p))) {
-      t = t.replace(/^[^\n]*\n?/, '').trim();
+  
+  // 移除常见的 AI 废话开头（多行匹配）
+  const lines = t.split('\n');
+  const resultLines = [];
+  let foundStart = false;
+  let inBannedSection = false;
+
+  for (const line of lines) {
+    const l = line.trim();
+    // 如果匹配到这些关键词，说明进入了“解释说明”区域，跳过后续所有行
+    if (l.startsWith('修正说明') || l.startsWith('修改说明') || l.startsWith('说明：') || l.startsWith('Note:')) {
+      inBannedSection = true;
+      continue;
     }
+    if (inBannedSection) continue;
+
+    // 过滤掉引导性的短句
+    if (!foundStart) {
+      if (l.startsWith('修正后的文本') || l.startsWith('润色后的文本') || l.startsWith('结果：') || l.startsWith('基于搜索')) {
+        continue;
+      }
+      if (l === '') continue;
+      foundStart = true;
+    }
+    resultLines.push(line);
   }
-  return t.trim();
+  
+  return resultLines.join('\n').trim();
 };
 
 type RecordingState = 'idle' | 'recording' | 'transcribing' | 'error';
@@ -45,19 +67,21 @@ type Article = {
   updatedAt: number;
 };
 
-const FIX_SYSTEM_PROMPT = `你是一个严格克制的文字修正器。你的任务是把用户文本中的错别字、明显语法问题、标点与分段做最小必要修正。
-硬性规则：
-- 绝对不能改变事实、观点、逻辑顺序与段落结构
-- 不要扩写，不要加入新信息，不要改变语气
-- 可以保留口语风格，但把明显影响理解的地方修到可读
-输出格式：只输出修正后的全文正文，不要给任何解释、清单或标题。`;
+const FIX_SYSTEM_PROMPT = `你是一个严格的文字修正接口。
+你的输出将直接替换用户的原始文本，因此必须：
+1. 只输出修正后的文本内容。
+2. 严禁包含任何解释、分析、备注、修正说明或前言。
+3. 严禁输出类似“修正后的文本如下”之类的引导语。
+4. 保持原有的 Markdown 格式。
+5. 如果内容没有错别字，请原样返回，不要做任何说明。`;
 
-const POLISH_SYSTEM_PROMPT = `你是一个写作润色助手，目标是提升可读性、连贯性与表达质感，同时保持作者语气自然克制。
-硬性规则：
-- 不能引入新事实或编造细节；不确定的内容不要补
-- 允许适度改写句子以更顺更清晰，但不要写得浮夸
-- 尽量保留原意与重点，避免信息发生变化
-输出格式：只输出润色后的全文正文，不要给任何解释、清单或标题，禁止输出类似「silently」「note」等无关提示词。`;
+const POLISH_SYSTEM_PROMPT = `你是一个专业的文字润色接口。
+你的输出将直接替换用户的原始文本，因此必须：
+1. 只输出润色后的文本内容。
+2. 严禁包含任何解释、评价、建议、润色说明或前言。
+3. 严禁输出类似“润色后的结果：”之类的引导语。
+4. 保持原有的 Markdown 格式。
+5. 保持语气自然，不要过度修饰。`;
 
 const selectionUserTemplate = (selection: string) =>
   `请只处理下面这段文本（保持原意，不要添加任何新信息），保持 Markdown 标记与格式，不要破坏标记。你的输出将被直接替换这段文本，因此只输出替换后的文本正文：
@@ -501,7 +525,7 @@ export default function App() {
     const userMessage = hasSelection ? selectionUserTemplate(selectedText) : fullUserTemplate(text);
     const systemMessage = action === 'fix' ? FIX_SYSTEM_PROMPT : POLISH_SYSTEM_PROMPT;
     const body = {
-      model: 'supermind-agent-v1',
+      model: 'deepseek',
       tool_choice: 'none',
       messages: [
         { role: 'system', content: systemMessage },
