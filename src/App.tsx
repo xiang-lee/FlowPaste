@@ -536,7 +536,11 @@ export default function App() {
     const controller = new AbortController();
     cancelledByUserRef.current = false;
     chatAbortRef.current = controller;
-    setUndoSnapshot(text);
+    
+    // Capture snapshot locally to ensure it's available immediately in the async closure
+    const currentSnapshot = text;
+    setUndoSnapshot(currentSnapshot);
+    
     setActionState('processing');
     setActiveAction(action);
     showToast(`${action === 'fix' ? 'Fix' : 'Polish'} 处理中...`, 'info');
@@ -582,9 +586,8 @@ export default function App() {
                 
                 // Real-time update
                 setText(() => {
-                  // Always reconstruct from the snapshot to avoid messing up indices or accumulating errors
-                  // undoSnapshot is the full text BEFORE we started generating
-                  const original = undoSnapshot || ''; 
+                  // Always reconstruct from the LOCAL snapshot
+                  const original = currentSnapshot; 
                   if (hasSelection) {
                     return `${original.slice(0, selStart)}${accumulatedContent}${original.slice(selEnd)}`;
                   }
@@ -603,7 +606,7 @@ export default function App() {
       if (!finalContent || !finalContent.trim()) throw new Error('返回为空，请重试');
       
       setText(() => {
-        const original = undoSnapshot || '';
+        const original = currentSnapshot;
         if (hasSelection) {
           const next = `${original.slice(0, selStart)}${finalContent}${original.slice(selEnd)}`;
           const newEnd = selStart + finalContent.length;
