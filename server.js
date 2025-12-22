@@ -13,7 +13,15 @@ const API_TOKEN = process.env.AI_BUILDER_TOKEN || process.env.VITE_AI_BUILDER_TO
 
 const app = express();
 
-app.use(express.static(distPath, { maxAge: '1y', etag: true }));
+app.use(express.static(distPath, {
+  maxAge: '1y',
+  etag: true,
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('index.html')) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    }
+  },
+}));
 
 app.use('/api', async (req, res) => {
   try {
@@ -44,6 +52,7 @@ app.use('/api', async (req, res) => {
 });
 
 app.get('*', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   res.sendFile(path.join(distPath, 'index.html'));
 });
 
