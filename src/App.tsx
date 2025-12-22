@@ -779,17 +779,18 @@ export default function App() {
             <button
               data-testid="record-button"
               className={`btn primary ${recordingState !== 'idle' ? 'active' : ''}`}
+              onMouseDown={(e) => e.preventDefault()}
               onClick={recordingState === 'recording' ? handleStopRecording : handleStartRecording}
             >
               {renderRecordLabel()}
             </button>
             {recordingState === 'recording' && (
-              <button className="btn ghost" onClick={handleStopRecording}>
+              <button className="btn ghost" onMouseDown={(e) => e.preventDefault()} onClick={handleStopRecording}>
                 停止
               </button>
             )}
             {recordingState === 'transcribing' && (
-              <button className="btn ghost" onClick={handleStopRecording}>
+              <button className="btn ghost" onMouseDown={(e) => e.preventDefault()} onClick={handleStopRecording}>
                 取消转写
               </button>
             )}
@@ -799,6 +800,7 @@ export default function App() {
             <button
               data-testid="fix-button"
               className="btn"
+              onMouseDown={(e) => e.preventDefault()}
               onClick={() => runTextAction('fix')}
             >
               {activeAction === 'fix' && actionState === 'processing' ? 'Fix 中…(点击取消)' : 'Fix'}
@@ -806,6 +808,7 @@ export default function App() {
             <button
               data-testid="polish-button"
               className="btn"
+              onMouseDown={(e) => e.preventDefault()}
               onClick={() => runTextAction('polish')}
             >
               {activeAction === 'polish' && actionState === 'processing' ? 'Polish 中…(点击取消)' : 'Polish'}
