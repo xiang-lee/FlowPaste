@@ -527,6 +527,7 @@ export default function App() {
     const body = {
       model: 'deepseek',
       tool_choice: 'none',
+      stream: true,
       messages: [
         { role: 'system', content: systemMessage },
         { role: 'user', content: userMessage },
@@ -539,35 +540,79 @@ export default function App() {
     setActionState('processing');
     setActiveAction(action);
     showToast(`${action === 'fix' ? 'Fix' : 'Polish'} 处理中...`, 'info');
+
+    let accumulatedContent = '';
+    
     try {
-      const res = await requestWithRetry(
-        (signal) =>
-          fetch(`${BASE_URL}/v1/chat/completions`, {
-            method: 'POST',
-            headers: { ...baseHeaders, 'Content-Type': 'application/json' },
-            body: JSON.stringify(body),
-            signal,
-          }),
-        { userController: controller, timeoutMs: 30000, retries: 1 },
-      );
+      const res = await fetch(`${BASE_URL}/v1/chat/completions`, {
+        method: 'POST',
+        headers: { ...baseHeaders, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+
       if (!res.ok) {
         const msg = await parseError(res);
         throw new Error(msg);
       }
-      const data = await res.json();
-      const contentRaw: string | null = data?.choices?.[0]?.message?.content ?? null;
-      const content = contentRaw ? sanitizeModelText(contentRaw) : null;
-      if (!content || !content.trim()) throw new Error('返回为空，请重试');
-      setText((prev) => {
+
+      const reader = res.body?.getReader();
+      if (!reader) throw new Error('无法读取响应流');
+      
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || trimmed === 'data: [DONE]') continue;
+          if (trimmed.startsWith('data: ')) {
+            try {
+              const json = JSON.parse(trimmed.slice(6));
+              const delta = json.choices?.[0]?.delta?.content || '';
+              if (delta) {
+                accumulatedContent += delta;
+                
+                // Real-time update
+                setText(() => {
+                  // Always reconstruct from the snapshot to avoid messing up indices or accumulating errors
+                  // undoSnapshot is the full text BEFORE we started generating
+                  const original = undoSnapshot || ''; 
+                  if (hasSelection) {
+                    return `${original.slice(0, selStart)}${accumulatedContent}${original.slice(selEnd)}`;
+                  }
+                  return accumulatedContent; // For full text replacement
+                });
+              }
+            } catch (e) {
+              console.error('JSON parse error', e);
+            }
+          }
+        }
+      }
+      
+      // Final sanitization
+      const finalContent = sanitizeModelText(accumulatedContent);
+      if (!finalContent || !finalContent.trim()) throw new Error('返回为空，请重试');
+      
+      setText(() => {
+        const original = undoSnapshot || '';
         if (hasSelection) {
-          const replacement = content.trim();
-          const next = `${prev.slice(0, selStart)}${replacement}${prev.slice(selEnd)}`;
-          const newEnd = selStart + replacement.length;
+          const next = `${original.slice(0, selStart)}${finalContent}${original.slice(selEnd)}`;
+          const newEnd = selStart + finalContent.length;
           setSelection({ start: newEnd, end: newEnd });
           return next;
         }
-        return content.trim();
+        return finalContent;
       });
+
       showToast(`已应用 ${action === 'fix' ? 'Fix' : 'Polish'}`, 'success', {
         label: '撤销',
         onClick: handleUndo,
@@ -576,6 +621,8 @@ export default function App() {
       const userCancelled = cancelledByUserRef.current;
       if (userCancelled) {
         showToast('已取消处理', 'info');
+        // Revert to undo snapshot if cancelled?
+        if (undoSnapshot) setText(undoSnapshot);
         return;
       }
       const message =
@@ -585,6 +632,8 @@ export default function App() {
             ? error.message
             : '处理失败';
       showToast(message, 'error');
+      // On error, revert changes to avoid partial text
+      if (undoSnapshot) setText(undoSnapshot);
     } finally {
       chatAbortRef.current = null;
       cancelledByUserRef.current = false;
