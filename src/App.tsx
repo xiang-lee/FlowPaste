@@ -665,9 +665,9 @@ export default function App() {
       <div className="main-content">
         <header className="hero">
           <div className="hero-text">
-            <p className="eyebrow">FlowPaste · 口述到发布一页闭环</p>
-            <h1>语音连续输出，一键 Fix / Polish，永不丢稿。</h1>
-            <p className="subline">录音→转写→克制修正→润色→撤销，全部在同一屏完成，无需外部 copy/paste。</p>
+            <p className="eyebrow">FlowPaste</p>
+            <h1>语音转写，一键润色，创作永不中断</h1>
+            <p className="subline">录音、转写、修正、润色全流程一屏搞定。无需频繁复制粘贴，多文档轻松切换，数据本地存储，安全更私密。</p>
           </div>
         </header>
 
