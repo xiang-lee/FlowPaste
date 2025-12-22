@@ -419,11 +419,6 @@ export default function App() {
   };
 
   const transcribeAudio = async (blob: Blob) => {
-    if (!TOKEN) {
-      showToast('缺少 API token，请在 .env 配置', 'error');
-      setRecordingState('idle');
-      return;
-    }
     const controller = new AbortController();
     cancelledByUserRef.current = false;
     transcribeAbortRef.current = controller;
@@ -480,10 +475,6 @@ export default function App() {
   };
 
   const runTextAction = async (action: ActionType) => {
-    if (!TOKEN) {
-      showToast('缺少 API token，请在 .env 配置', 'error');
-      return;
-    }
     if (actionState === 'processing') {
       cancelledByUserRef.current = true;
       chatAbortRef.current?.abort();
