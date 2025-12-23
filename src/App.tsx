@@ -196,11 +196,23 @@ export default function App() {
 
   const [selection, setSelection] = useState({ start: 0, end: 0 });
   const [undoSnapshot, setUndoSnapshot] = useState<string | null>(null);
+  const undoSnapshotRef = useRef<string | null>(null);
   const [focusMode, setFocusMode] = useState(false);
   const [recordingState, setRecordingState] = useState<RecordingState>('idle');
   const [actionState, setActionState] = useState<'idle' | 'processing'>('idle');
   const [activeAction, setActiveAction] = useState<ActionType | null>(null);
   const [viewMode, setViewMode] = useState<'markdown' | 'wysiwyg'>('markdown');
+  const isMac = useMemo(
+    () => typeof navigator !== 'undefined' && /Mac|iPhone|iPad|iPod/.test(navigator.platform),
+    [],
+  );
+  const shortcutHints = useMemo(() => {
+    const format = (key: string) => (isMac ? `Cmd+Shift+${key}` : `Ctrl+Shift+${key}`);
+    return {
+      fix: format('F'),
+      polish: format('P'),
+    };
+  }, [isMac]);
   const wysiwygRef = useRef<HTMLDivElement | null>(null);
   const turndown = useMemo(() => {
     const t = new TurndownService();
@@ -250,6 +262,10 @@ export default function App() {
   useEffect(() => {
     lastCursorRef.current = selection;
   }, [selection]);
+
+  useEffect(() => {
+    undoSnapshotRef.current = undoSnapshot;
+  }, [undoSnapshot]);
 
   // Sync text to current article in the list
   useEffect(() => {
@@ -412,11 +428,15 @@ export default function App() {
     setToast({ id: Date.now(), message, kind, action });
   };
 
-  const handleUndo = () => {
-    if (!undoSnapshot) return;
-    setText(undoSnapshot);
+  const applyUndoSnapshot = (snapshot: string | null) => {
+    if (!snapshot) return;
+    setText(snapshot);
     setUndoSnapshot(null);
     showToast('已撤销上次修改', 'info');
+  };
+
+  const handleUndo = () => {
+    applyUndoSnapshot(undoSnapshotRef.current);
   };
 
   const copyPlainTextToClipboard = async (value: string) => {
@@ -800,7 +820,7 @@ export default function App() {
 
       showToast(`已应用 ${action === 'fix' ? 'Fix' : 'Polish'}`, 'success', {
         label: '撤销',
-        onClick: handleUndo,
+        onClick: () => applyUndoSnapshot(currentSnapshot),
       });
     } catch (error) {
       const userCancelled = cancelledByUserRef.current;
@@ -913,6 +933,27 @@ export default function App() {
     };
   }, []);
 
+  useEffect(() => {
+    const matchesShortcut = (event: KeyboardEvent, key: string) => {
+      const modKey = isMac ? event.metaKey : event.ctrlKey;
+      return modKey && event.shiftKey && !event.altKey && event.key.toLowerCase() === key;
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.repeat) return;
+      if (matchesShortcut(event, 'f')) {
+        event.preventDefault();
+        runTextAction('fix');
+        return;
+      }
+      if (matchesShortcut(event, 'p')) {
+        event.preventDefault();
+        runTextAction('polish');
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isMac, recordingState, handleStartRecording, handleStopRecording, runTextAction]);
+
   return (
     <div className={`app-shell ${focusMode ? 'focus' : ''}`}>
       {/* Sidebar */}
@@ -1006,11 +1047,11 @@ export default function App() {
           <div className="btn-group">
             <button
               data-testid="record-button"
-              className={`btn primary ${recordingState !== 'idle' ? 'active' : ''}`}
+              className={`btn primary small ${recordingState !== 'idle' ? 'active' : ''}`}
               onMouseDown={(e) => e.preventDefault()}
               onClick={recordingState === 'recording' ? handleStopRecording : handleStartRecording}
             >
-              {renderRecordLabel()}
+              <span className="btn-label">{renderRecordLabel()}</span>
             </button>
             {recordingState === 'recording' && (
               <button className="btn ghost" onMouseDown={(e) => e.preventDefault()} onClick={handleStopRecording}>
@@ -1030,16 +1071,30 @@ export default function App() {
               className="btn"
               onMouseDown={handleActionMouseDown}
               onClick={() => runTextAction('fix')}
+              title={`快捷键：${shortcutHints.fix}`}
+              aria-keyshortcuts={isMac ? 'Meta+Shift+F' : 'Control+Shift+F'}
             >
-              {activeAction === 'fix' && actionState === 'processing' ? 'Fix 中…(点击取消)' : 'Fix'}
+              <span className="btn-label">
+                {activeAction === 'fix' && actionState === 'processing' ? 'Fix 中…(点击取消)' : 'Fix'}
+              </span>
+              <span className="btn-shortcut" aria-hidden="true">
+                {shortcutHints.fix}
+              </span>
             </button>
             <button
               data-testid="polish-button"
               className="btn"
               onMouseDown={handleActionMouseDown}
               onClick={() => runTextAction('polish')}
+              title={`快捷键：${shortcutHints.polish}`}
+              aria-keyshortcuts={isMac ? 'Meta+Shift+P' : 'Control+Shift+P'}
             >
-              {activeAction === 'polish' && actionState === 'processing' ? 'Polish 中…(点击取消)' : 'Polish'}
+              <span className="btn-label">
+                {activeAction === 'polish' && actionState === 'processing' ? 'Polish 中…(点击取消)' : 'Polish'}
+              </span>
+              <span className="btn-shortcut" aria-hidden="true">
+                {shortcutHints.polish}
+              </span>
             </button>
           </div>
 
