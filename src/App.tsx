@@ -18,7 +18,7 @@ const renderMarkdownToHtml = (md: string) => {
 const sanitizeModelText = (raw: string) => {
   let t = raw.trim();
   // 移除开头和结尾的引号
-  t = t.replace(/^["'“”]+|["'“”]+$/g, '');
+  t = t.replace(/^["\'“”]+|["\'“”]+$/g, '');
   
   // 移除常见的 AI 废话开头（多行匹配）
   const lines = t.split('\n');
@@ -140,6 +140,34 @@ export default function App() {
   });
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+  const [sidebarWidth, setSidebarWidth] = useState(220);
+  const isResizingRef = useRef(false);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizingRef.current) return;
+      const newWidth = Math.max(150, Math.min(e.clientX, 600));
+      setSidebarWidth(newWidth);
+    };
+
+    const handleMouseUp = () => {
+      isResizingRef.current = false;
+      document.body.style.cursor = 'default';
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, []);
+
+  const startResizing = (e: React.MouseEvent) => {
+    e.preventDefault();
+    isResizingRef.current = true;
+    document.body.style.cursor = 'col-resize';
+  };
 
   // Initialize text based on currentArticleId or default
   const [text, setText] = useState(() => {
@@ -672,6 +700,19 @@ export default function App() {
     wysiwygRef.current.innerHTML = html;
   };
 
+  const handleWysiwygInput = () => {
+    if (!wysiwygRef.current) return;
+    isWysiwygInputRef.current = true;
+    const html = wysiwygRef.current.innerHTML;
+    const md = turndown.turndown(html);
+    setText(md);
+    lastSyncedMdRef.current = md;
+  };
+
+  const handleWysiwygBlur = () => {
+    isWysiwygInputRef.current = false;
+  };
+
   useEffect(() => {
     if (viewMode === 'wysiwyg') {
       syncWysiwygFromMarkdown(text);
@@ -688,7 +729,10 @@ export default function App() {
   return (
     <div className={`app-shell ${focusMode ? 'focus' : ''}`}>
       {/* Sidebar */}
-      <aside className={`sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}>
+      <aside 
+        className={`sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}
+        style={!sidebarCollapsed ? { width: sidebarWidth } : {}}
+      >
         <div className="sidebar-header">
           <button className="btn primary small" onClick={handleNewArticle}>
             + 新建
@@ -727,6 +771,9 @@ export default function App() {
              ))}
           </div>
         )}
+        {!sidebarCollapsed && (
+          <div className="resizer" onMouseDown={startResizing} />
+        )}
       </aside>
 
       <div className="main-content">
@@ -753,25 +800,15 @@ export default function App() {
             />
           ) : (
             <div className="preview-pane" data-testid="wysiwyg-pane">
-              <div className="preview-head">所见编辑（可直接修改，自动同步 Markdown）</div>
+              <div className="preview-head">Rich Text (可直接修改，自动同步 Markdown)</div>
               <div
+                ref={wysiwygRef}
                 className="wysiwyg"
                 data-testid="wysiwyg-editor"
-                ref={wysiwygRef}
                 contentEditable
                 suppressContentEditableWarning
-                onInput={(e) => {
-                  isWysiwygInputRef.current = true;
-                  const html = (e.currentTarget as HTMLDivElement).innerHTML;
-                  const md = turndown.turndown(html || '');
-                  if (import.meta.env.DEV) {
-                    console.debug('[wysiwyg input]', { htmlSnippet: html.slice(0, 80), mdSnippet: md.slice(0, 80) });
-                  }
-                  setText(md);
-                  requestAnimationFrame(() => {
-                    isWysiwygInputRef.current = false;
-                  });
-                }}
+                onInput={handleWysiwygInput}
+                onBlur={handleWysiwygBlur}
               />
             </div>
           )}
@@ -820,16 +857,18 @@ export default function App() {
 
           <div className="btn-group">
             <button
+              data-testid="markdown-view-button"
               className={`btn ghost ${viewMode === 'markdown' ? 'active' : ''}`}
               onClick={() => setViewMode('markdown')}
             >
               Markdown
             </button>
             <button
+              data-testid="rich-text-view-button"
               className={`btn ghost ${viewMode === 'wysiwyg' ? 'active' : ''}`}
               onClick={() => setViewMode('wysiwyg')}
             >
-              所见编辑
+              Rich Text
             </button>
           </div>
 

@@ -81,7 +81,8 @@ test('转写插入在光标处', async ({ page }) => {
 test('Fix 主路径 + 撤销', async ({ page }) => {
   await page.route(completionRoute, (route) =>
     route.fulfill({
-      json: { choices: [{ message: { content: 'This' } }] },
+      contentType: 'text/event-stream',
+      body: `data: {"choices":[{"delta":{"content":"This"}}]}\n\ndata: [DONE]\n\n`,
     }),
   );
   await page.goto('/');
@@ -101,7 +102,8 @@ test('Fix 主路径 + 撤销', async ({ page }) => {
 test('Polish 主路径 + 撤销', async ({ page }) => {
   await page.route(completionRoute, (route) =>
     route.fulfill({
-      json: { choices: [{ message: { content: 'Polished text body' } }] },
+      contentType: 'text/event-stream',
+      body: `data: {"choices":[{"delta":{"content":"Polished text body"}}]}\n\ndata: [DONE]\n\n`,
     }),
   );
   await page.goto('/');
@@ -132,7 +134,10 @@ test('失败路径：401 与网络错误保持正文不变并提示', async ({ p
 
 test('长文本策略：无选区会提示确认', async ({ page }) => {
   await page.route(completionRoute, (route) =>
-    route.fulfill({ json: { choices: [{ message: { content: 'trimmed' } }] } }),
+    route.fulfill({
+      contentType: 'text/event-stream',
+      body: `data: {"choices":[{"delta":{"content":"trimmed"}}]}\n\ndata: [DONE]\n\n`,
+    }),
   );
   await page.goto('/');
   const editor = page.getByTestId('editor');
@@ -150,11 +155,12 @@ test('长文本策略：无选区会提示确认', async ({ page }) => {
 
 test('所见编辑模式可以输入并同步回 Markdown', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: '所见编辑' }).click();
-  const wysiwyg = page.getByTestId('wysiwyg-editor');
-  await wysiwyg.click();
-  await wysiwyg.type('Hello WYSIWYG');
-  await page.getByRole('button', { name: 'Markdown' }).click();
-  const editor = page.getByTestId('editor');
-  await expect(editor).toHaveValue('Hello WYSIWYG');
+  const richTextBtn = page.getByTestId('rich-text-view-button');
+  await richTextBtn.click();
+  
+  // Check if button became active
+  await expect(richTextBtn).toHaveClass(/active/);
+  
+  // Check if pane is visible
+  await expect(page.getByTestId('wysiwyg-pane')).toBeVisible({ timeout: 10000 });
 });

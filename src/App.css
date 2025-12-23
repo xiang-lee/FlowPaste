@@ -26,19 +26,35 @@
 
 /* Sidebar */
 .sidebar {
-  width: 280px;
+  /* width: 280px;  Removed fixed width to allow inline style control */
   background: rgba(17, 22, 31, 0.5);
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: width 0.1s linear; /* Faster transition for dragging, or remove entirely if needed */
   flex-shrink: 0;
   backdrop-filter: blur(10px);
   overflow: hidden;
+  position: relative; /* For resizer positioning */
+}
+
+.resizer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 5px;
+  cursor: col-resize;
+  z-index: 10;
+  transition: background 0.2s;
+}
+
+.resizer:hover, .resizer:active {
+  background: rgba(123, 224, 184, 0.5); /* Accent color highlight */
 }
 
 .sidebar.collapsed {
-  width: 50px;
+  width: 50px !important; /* Force collapsed width */
 }
 
 .sidebar-header {
