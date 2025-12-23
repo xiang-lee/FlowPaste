@@ -392,8 +392,10 @@ export default function App() {
       startMarker.parentNode?.removeChild(startMarker);
       endMarker.parentNode?.removeChild(endMarker);
       suppressWysiwygInputRef.current = false;
-      sel.removeAllRanges();
-      sel.addRange(restoreRange);
+      if (sel) {
+        sel.removeAllRanges();
+        sel.addRange(restoreRange);
+      }
     }
   };
 

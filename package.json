@@ -8,7 +8,9 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
+    "test:types": "tsc -b --pretty false",
     "test:e2e": "playwright test",
+    "test": "npm run test:types",
     "start": "node server.js"
   },
   "dependencies": {
