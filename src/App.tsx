@@ -50,6 +50,8 @@ const sanitizeModelText = (raw: string) => {
 };
 
 const WYSIWYG_SYNC_THROTTLE_MS = 30;
+const SELECTION_START_TOKEN = 'FLOWPASTESELECTIONSTARTTOKEN';
+const SELECTION_END_TOKEN = 'FLOWPASTESELECTIONENDTOKEN';
 
 type RecordingState = 'idle' | 'recording' | 'transcribing' | 'error';
 type ActionType = 'fix' | 'polish';
@@ -209,8 +211,10 @@ export default function App() {
     return t;
   }, []);
   const lastSyncedMdRef = useRef<string>('');
+  const suppressWysiwygInputRef = useRef(false);
   const pendingWysiwygMdRef = useRef<string | null>(null);
   const wysiwygSyncTimerRef = useRef<number | null>(null);
+  const lastWysiwygRangeRef = useRef<Range | null>(null);
 
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
@@ -328,8 +332,57 @@ export default function App() {
     return headers;
   }, []);
 
+  const readWysiwygSelectionRange = () => {
+    if (!wysiwygRef.current) return null;
+    const sel = window.getSelection();
+    let range: Range | null = null;
+    if (sel && sel.rangeCount > 0) {
+      const currentRange = sel.getRangeAt(0);
+      if (wysiwygRef.current.contains(currentRange.commonAncestorContainer)) {
+        range = currentRange;
+      }
+    }
+    if (!range && lastWysiwygRangeRef.current) {
+      if (wysiwygRef.current.contains(lastWysiwygRangeRef.current.commonAncestorContainer)) {
+        range = lastWysiwygRangeRef.current;
+      }
+    }
+    if (!range) return null;
+    if (text.includes(SELECTION_START_TOKEN) || text.includes(SELECTION_END_TOKEN)) return null;
+
+    const startMarker = document.createTextNode(SELECTION_START_TOKEN);
+    const endMarker = document.createTextNode(SELECTION_END_TOKEN);
+    const restoreRange = range.cloneRange();
+
+    suppressWysiwygInputRef.current = true;
+    try {
+      const endRange = range.cloneRange();
+      endRange.collapse(false);
+      endRange.insertNode(endMarker);
+
+      const startRange = range.cloneRange();
+      startRange.collapse(true);
+      startRange.insertNode(startMarker);
+
+      const mdWithMarkers = turndown.turndown(wysiwygRef.current.innerHTML);
+      const startIndex = mdWithMarkers.indexOf(SELECTION_START_TOKEN);
+      const endIndex = mdWithMarkers.indexOf(SELECTION_END_TOKEN);
+      if (startIndex === -1 || endIndex === -1 || endIndex < startIndex) return null;
+
+      const start = startIndex;
+      const end = endIndex - SELECTION_START_TOKEN.length;
+      return { start, end };
+    } finally {
+      startMarker.parentNode?.removeChild(startMarker);
+      endMarker.parentNode?.removeChild(endMarker);
+      suppressWysiwygInputRef.current = false;
+      sel.removeAllRanges();
+      sel.addRange(restoreRange);
+    }
+  };
+
   const readSelection = () => {
-    if (viewMode !== 'markdown') return selection;
+    if (viewMode !== 'markdown') return readWysiwygSelectionRange() ?? selection;
     const el = textareaRef.current;
     if (!el) return selection;
     return { start: el.selectionStart, end: el.selectionEnd };
@@ -337,6 +390,22 @@ export default function App() {
 
   const updateSelectionFromTextarea = () => {
     setSelection(readSelection());
+  };
+
+  const captureWysiwygSelectionRange = () => {
+    if (suppressWysiwygInputRef.current) return;
+    if (!wysiwygRef.current) return;
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return;
+    const range = sel.getRangeAt(0);
+    if (!wysiwygRef.current.contains(range.commonAncestorContainer)) return;
+    lastWysiwygRangeRef.current = range.cloneRange();
+  };
+
+  const snapshotWysiwygSelection = () => {
+    captureWysiwygSelectionRange();
+    const range = readWysiwygSelectionRange();
+    if (range) setSelection(range);
   };
 
   const showToast = (message: string, kind: ToastKind = 'info', action?: Toast['action']) => {
@@ -348,6 +417,11 @@ export default function App() {
     setText(undoSnapshot);
     setUndoSnapshot(null);
     showToast('已撤销上次修改', 'info');
+  };
+
+  const handleActionMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (viewMode === 'wysiwyg') snapshotWysiwygSelection();
   };
 
   const handleStartRecording = async () => {
@@ -700,11 +774,13 @@ export default function App() {
     if (!wysiwygRef.current) return;
     const html = renderMarkdownToHtml(md);
     lastSyncedMdRef.current = md;
+    lastWysiwygRangeRef.current = null;
     wysiwygRef.current.innerHTML = html;
   };
 
   const handleWysiwygInput = () => {
     if (!wysiwygRef.current) return;
+    if (suppressWysiwygInputRef.current) return;
     const html = wysiwygRef.current.innerHTML;
     const md = turndown.turndown(html);
     setText(md);
@@ -742,6 +818,13 @@ export default function App() {
     const delay = actionState === 'processing' ? WYSIWYG_SYNC_THROTTLE_MS : 0;
     scheduleWysiwygSync(text, delay);
   }, [text, viewMode, actionState]);
+
+  useEffect(() => {
+    if (viewMode !== 'wysiwyg') return;
+    const handleSelectionChange = () => captureWysiwygSelectionRange();
+    document.addEventListener('selectionchange', handleSelectionChange);
+    return () => document.removeEventListener('selectionchange', handleSelectionChange);
+  }, [viewMode]);
 
   useEffect(() => {
     return () => {
@@ -834,6 +917,8 @@ export default function App() {
                 contentEditable
                 suppressContentEditableWarning
                 onInput={handleWysiwygInput}
+                onKeyUp={snapshotWysiwygSelection}
+                onMouseUp={snapshotWysiwygSelection}
               />
             </div>
           )}
@@ -865,7 +950,7 @@ export default function App() {
             <button
               data-testid="fix-button"
               className="btn"
-              onMouseDown={(e) => e.preventDefault()}
+              onMouseDown={handleActionMouseDown}
               onClick={() => runTextAction('fix')}
             >
               {activeAction === 'fix' && actionState === 'processing' ? 'Fix 中…(点击取消)' : 'Fix'}
@@ -873,7 +958,7 @@ export default function App() {
             <button
               data-testid="polish-button"
               className="btn"
-              onMouseDown={(e) => e.preventDefault()}
+              onMouseDown={handleActionMouseDown}
               onClick={() => runTextAction('polish')}
             >
               {activeAction === 'polish' && actionState === 'processing' ? 'Polish 中…(点击取消)' : 'Polish'}

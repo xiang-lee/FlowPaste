@@ -115,6 +115,41 @@ test('Polish 主路径 + 撤销', async ({ page }) => {
   await expect(editor).toHaveValue('rough text');
 });
 
+test('Rich Text 选区只替换选中内容（Fix）', async ({ page }) => {
+  await page.route(completionRoute, (route) =>
+    route.fulfill({
+      contentType: 'text/event-stream',
+      body: `data: {"choices":[{"delta":{"content":"Earth"}}]}\n\ndata: [DONE]\n\n`,
+    }),
+  );
+  await page.goto('/');
+  const editor = page.getByTestId('editor');
+  await editor.fill('Hello world\n\nSecond line.');
+  await page.getByTestId('rich-text-view-button').click();
+  await expect(page.getByTestId('wysiwyg-pane')).toBeVisible({ timeout: 10000 });
+
+  const wysiwyg = page.getByTestId('wysiwyg-editor');
+  await expect(wysiwyg).toContainText('Hello world');
+  await wysiwyg.evaluate((el) => {
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    const node = walker.nextNode();
+    if (!node || !node.textContent) return;
+    const start = node.textContent.indexOf('world');
+    if (start === -1) return;
+    const range = document.createRange();
+    range.setStart(node, start);
+    range.setEnd(node, start + 'world'.length);
+    const sel = window.getSelection();
+    sel?.removeAllRanges();
+    sel?.addRange(range);
+    document.dispatchEvent(new Event('selectionchange'));
+  });
+
+  await page.getByTestId('fix-button').click();
+  await page.getByTestId('markdown-view-button').click();
+  await expect(editor).toHaveValue('Hello Earth\n\nSecond line.');
+});
+
 test('失败路径：401 与网络错误保持正文不变并提示', async ({ page }) => {
   await page.route(completionRoute, (route) => route.fulfill({ status: 401, json: { detail: 'bad token' } }));
   await page.goto('/');
