@@ -49,6 +49,8 @@ const sanitizeModelText = (raw: string) => {
   return resultLines.join('\n').trim();
 };
 
+const WYSIWYG_SYNC_THROTTLE_MS = 30;
+
 type RecordingState = 'idle' | 'recording' | 'transcribing' | 'error';
 type ActionType = 'fix' | 'polish';
 type ToastKind = 'info' | 'success' | 'error';
@@ -206,8 +208,9 @@ export default function App() {
     });
     return t;
   }, []);
-  const isWysiwygInputRef = useRef(false);
   const lastSyncedMdRef = useRef<string>('');
+  const pendingWysiwygMdRef = useRef<string | null>(null);
+  const wysiwygSyncTimerRef = useRef<number | null>(null);
 
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
@@ -702,29 +705,52 @@ export default function App() {
 
   const handleWysiwygInput = () => {
     if (!wysiwygRef.current) return;
-    isWysiwygInputRef.current = true;
     const html = wysiwygRef.current.innerHTML;
     const md = turndown.turndown(html);
     setText(md);
     lastSyncedMdRef.current = md;
   };
 
-  const handleWysiwygBlur = () => {
-    isWysiwygInputRef.current = false;
+  const scheduleWysiwygSync = (md: string, delay: number) => {
+    pendingWysiwygMdRef.current = md;
+    if (wysiwygSyncTimerRef.current !== null) {
+      if (delay > 0) return;
+      window.clearTimeout(wysiwygSyncTimerRef.current);
+      wysiwygSyncTimerRef.current = null;
+    }
+    if (delay === 0) {
+      syncWysiwygFromMarkdown(md);
+      return;
+    }
+    wysiwygSyncTimerRef.current = window.setTimeout(() => {
+      wysiwygSyncTimerRef.current = null;
+      const next = pendingWysiwygMdRef.current;
+      if (!next) return;
+      syncWysiwygFromMarkdown(next);
+    }, delay);
   };
 
   useEffect(() => {
     if (viewMode === 'wysiwyg') {
-      syncWysiwygFromMarkdown(text);
+      scheduleWysiwygSync(text, 0);
     }
   }, [viewMode]);
 
   useEffect(() => {
     if (viewMode !== 'wysiwyg') return;
-    if (isWysiwygInputRef.current) return;
     if (text === lastSyncedMdRef.current) return;
-    syncWysiwygFromMarkdown(text);
-  }, [text, viewMode]);
+    const delay = actionState === 'processing' ? WYSIWYG_SYNC_THROTTLE_MS : 0;
+    scheduleWysiwygSync(text, delay);
+  }, [text, viewMode, actionState]);
+
+  useEffect(() => {
+    return () => {
+      if (wysiwygSyncTimerRef.current !== null) {
+        window.clearTimeout(wysiwygSyncTimerRef.current);
+        wysiwygSyncTimerRef.current = null;
+      }
+    };
+  }, []);
 
   return (
     <div className={`app-shell ${focusMode ? 'focus' : ''}`}>
@@ -808,7 +834,6 @@ export default function App() {
                 contentEditable
                 suppressContentEditableWarning
                 onInput={handleWysiwygInput}
-                onBlur={handleWysiwygBlur}
               />
             </div>
           )}
