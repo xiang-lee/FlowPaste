@@ -419,6 +419,83 @@ export default function App() {
     showToast('已撤销上次修改', 'info');
   };
 
+  const copyPlainTextToClipboard = async (value: string) => {
+    if (navigator.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(value);
+        return true;
+      } catch {
+        // fall back to execCommand
+      }
+    }
+    const el = document.createElement('textarea');
+    el.value = value;
+    el.setAttribute('readonly', 'true');
+    el.style.position = 'fixed';
+    el.style.left = '-9999px';
+    el.style.opacity = '0';
+    document.body.appendChild(el);
+    el.focus();
+    el.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(el);
+    return ok;
+  };
+
+  const copyRichTextToClipboard = async (html: string, plain: string) => {
+    const ClipboardItemCtor = typeof ClipboardItem !== 'undefined' ? ClipboardItem : undefined;
+    if (navigator.clipboard?.write && ClipboardItemCtor) {
+      try {
+        const item = new ClipboardItemCtor({
+          'text/html': new Blob([html], { type: 'text/html' }),
+          'text/plain': new Blob([plain], { type: 'text/plain' }),
+        });
+        await navigator.clipboard.write([item]);
+        return true;
+      } catch {
+        // fall back to execCommand
+      }
+    }
+    const container = document.createElement('div');
+    container.setAttribute('contenteditable', 'true');
+    container.setAttribute('aria-hidden', 'true');
+    container.style.position = 'fixed';
+    container.style.left = '-9999px';
+    container.style.top = '0';
+    container.style.opacity = '0';
+    container.innerHTML = html;
+    document.body.appendChild(container);
+    const range = document.createRange();
+    range.selectNodeContents(container);
+    const sel = window.getSelection();
+    sel?.removeAllRanges();
+    sel?.addRange(range);
+    const ok = document.execCommand('copy');
+    sel?.removeAllRanges();
+    document.body.removeChild(container);
+    if (!ok) return copyPlainTextToClipboard(plain);
+    return true;
+  };
+
+  const handleCopyMarkdown = async () => {
+    if (!text.trim()) {
+      showToast('没有可复制的内容', 'info');
+      return;
+    }
+    const ok = await copyPlainTextToClipboard(text);
+    showToast(ok ? '已复制 Markdown' : '复制失败，请检查浏览器权限', ok ? 'success' : 'error');
+  };
+
+  const handleCopyRichText = async () => {
+    if (!text.trim()) {
+      showToast('没有可复制的内容', 'info');
+      return;
+    }
+    const html = renderMarkdownToHtml(text);
+    const ok = await copyRichTextToClipboard(html, text);
+    showToast(ok ? '已复制 Rich Text' : '复制失败，请检查浏览器权限', ok ? 'success' : 'error');
+  };
+
   const handleActionMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
     if (viewMode === 'wysiwyg') snapshotWysiwygSelection();
@@ -769,6 +846,7 @@ export default function App() {
     recordingState === 'transcribing' ||
     recordingState === 'recording' ||
     actionState === 'processing';
+  const canCopy = text.trim().length > 0;
 
   const syncWysiwygFromMarkdown = (md: string) => {
     if (!wysiwygRef.current) return;
@@ -979,6 +1057,29 @@ export default function App() {
               onClick={() => setViewMode('wysiwyg')}
             >
               Rich Text
+            </button>
+          </div>
+
+          <div className="btn-group">
+            <button
+              data-testid="copy-markdown-button"
+              className={`btn ghost small ${canCopy ? '' : 'disabled'}`}
+              onClick={handleCopyMarkdown}
+              disabled={!canCopy}
+              title="复制 Markdown"
+              aria-label="复制 Markdown"
+            >
+              复制 MD
+            </button>
+            <button
+              data-testid="copy-rich-text-button"
+              className={`btn ghost small ${canCopy ? '' : 'disabled'}`}
+              onClick={handleCopyRichText}
+              disabled={!canCopy}
+              title="复制 Rich Text"
+              aria-label="复制 Rich Text"
+            >
+              复制 RT
             </button>
           </div>
 
