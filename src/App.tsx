@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import TurndownService from 'turndown';
 import { marked } from 'marked';
 import './App.css';
+import { useI18n } from './hooks/useI18n';
 
 const injectBlankPlaceholders = (md: string) =>
   md.replace(/\n{3,}/g, (match) => {
@@ -17,10 +18,8 @@ const renderMarkdownToHtml = (md: string) => {
 
 const sanitizeModelText = (raw: string) => {
   let t = raw.trim();
-  // 移除开头和结尾的引号
-  t = t.replace(/^["\'“”]+|["\'“”]+$/g, '');
+  t = t.replace(/^["'“”]+|["'“”]+$/g, '');
   
-  // 移除常见的 AI 废话开头（多行匹配）
   const lines = t.split('\n');
   const resultLines = [];
   let foundStart = false;
@@ -28,16 +27,20 @@ const sanitizeModelText = (raw: string) => {
 
   for (const line of lines) {
     const l = line.trim();
-    // 如果匹配到这些关键词，说明进入了“解释说明”区域，跳过后续所有行
-    if (l.startsWith('修正说明') || l.startsWith('修改说明') || l.startsWith('说明：') || l.startsWith('Note:')) {
+    if (
+      l.startsWith('修正说明') || l.startsWith('修改说明') || l.startsWith('说明：') || l.startsWith('Note:') || 
+      l.startsWith('Explanation:') || l.startsWith('Correction:') || l.startsWith('Remark:')
+    ) {
       inBannedSection = true;
       continue;
     }
     if (inBannedSection) continue;
 
-    // 过滤掉引导性的短句
     if (!foundStart) {
-      if (l.startsWith('修正后的文本') || l.startsWith('润色后的文本') || l.startsWith('结果：') || l.startsWith('基于搜索')) {
+      if (
+        l.startsWith('修正后的文本') || l.startsWith('润色后的文本') || l.startsWith('结果：') || l.startsWith('基于搜索') ||
+        l.startsWith('Corrected text:') || l.startsWith('Polished text:') || l.startsWith('Result:')
+      ) {
         continue;
       }
       if (l === '') continue;
@@ -71,30 +74,6 @@ type Article = {
   updatedAt: number;
 };
 
-const FIX_SYSTEM_PROMPT = `你是一个严格的文字修正接口。
-你的输出将直接替换用户的原始文本，因此必须：
-1. 只输出修正后的文本内容。
-2. 严禁包含任何解释、分析、备注、修正说明或前言。
-3. 严禁输出类似“修正后的文本如下”之类的引导语。
-4. 保持原有的 Markdown 格式。
-5. 如果内容没有错别字，请原样返回，不要做任何说明。`;
-
-const POLISH_SYSTEM_PROMPT = `你是一个专业的文字润色接口。
-你的输出将直接替换用户的原始文本，因此必须：
-1. 只输出润色后的文本内容。
-2. 严禁包含任何解释、评价、建议、润色说明或前言。
-3. 严禁输出类似“润色后的结果：”之类的引导语。
-4. 保持原有的 Markdown 格式。
-5. 保持语气自然，不要过度修饰。`;
-
-const selectionUserTemplate = (selection: string) =>
-  `请只处理下面这段文本（保持原意，不要添加任何新信息），保持 Markdown 标记与格式，不要破坏标记。你的输出将被直接替换这段文本，因此只输出替换后的文本正文：
-${selection}`;
-
-const fullUserTemplate = (text: string) =>
-  `请处理下面全文（保持原意，不要添加任何新信息），保持 Markdown 标记与格式，不要破坏标记。只输出处理后的正文：
-${text}`;
-
 const LONG_TEXT_THRESHOLD = 8000;
 const BASE_URL = '/api';
 const TOKEN = import.meta.env.VITE_AI_BUILDER_TOKEN;
@@ -124,6 +103,8 @@ function useToast() {
 }
 
 export default function App() {
+  const { t, lang, changeLanguage } = useI18n();
+
   // --- Article State ---
   const [articles, setArticles] = useState<Article[]>(() => {
     const saved = localStorage.getItem('flowpaste_articles');
@@ -135,7 +116,7 @@ export default function App() {
         console.error('Failed to parse articles', e);
       }
     }
-    return [{ id: Date.now().toString(), title: 'Untitled', content: '', updatedAt: Date.now() }];
+    return [{ id: Date.now().toString(), title: t.ui.untitled, content: '', updatedAt: Date.now() }];
   });
 
   const [currentArticleId, setCurrentArticleId] = useState<string>(() => {
@@ -173,7 +154,6 @@ export default function App() {
     document.body.style.cursor = 'col-resize';
   };
 
-  // Initialize text based on currentArticleId or default
   const [text, setText] = useState(() => {
     const savedId = localStorage.getItem('flowpaste_current_id');
     const savedArticlesStr = localStorage.getItem('flowpaste_articles');
@@ -189,7 +169,9 @@ export default function App() {
             } else if (savedArticles.length > 0) {
                 initialText = savedArticles[0].content;
             }
-        } catch {}
+        } catch {
+            // ignore
+        }
     }
     return initialText;
   });
@@ -239,16 +221,14 @@ export default function App() {
 
   const { toast, setToast } = useToast();
 
-  // Validate currentArticleId on mount
   useEffect(() => {
     if (!articles.find(a => a.id === currentArticleId)) {
       if (articles.length > 0) {
         setCurrentArticleId(articles[0].id);
         setText(articles[0].content);
       } else {
-         // Should ideally not happen due to initial state, but for safety
          const newId = Date.now().toString();
-         setArticles([{ id: newId, title: 'Untitled', content: '', updatedAt: Date.now() }]);
+         setArticles([{ id: newId, title: t.ui.untitled, content: '', updatedAt: Date.now() }]);
          setCurrentArticleId(newId);
          setText('');
       }
@@ -267,22 +247,19 @@ export default function App() {
     undoSnapshotRef.current = undoSnapshot;
   }, [undoSnapshot]);
 
-  // Sync text to current article in the list
   useEffect(() => {
     setArticles(prev => {
       const idx = prev.findIndex(a => a.id === currentArticleId);
       if (idx === -1) return prev;
-      
-      // If content hasn't changed, don't update (avoids unnecessary re-renders/saves)
       if (prev[idx].content === text) return prev;
 
-      const titleLine = text.trim().split('\n')[0] || 'Untitled';
+      const titleLine = text.trim().split('\n')[0] || t.ui.untitled;
       const newTitle = titleLine.length > 40 ? titleLine.slice(0, 40) + '...' : titleLine;
 
       const updatedArticle = { 
         ...prev[idx], 
         content: text, 
-        title: newTitle || 'Untitled',
+        title: newTitle || t.ui.untitled,
         updatedAt: Date.now() 
       };
       
@@ -290,9 +267,8 @@ export default function App() {
       newArticles[idx] = updatedArticle;
       return newArticles;
     });
-  }, [text, currentArticleId]);
+  }, [text, currentArticleId, t.ui.untitled]);
 
-  // Persistence
   useEffect(() => {
     localStorage.setItem('flowpaste_articles', JSON.stringify(articles));
   }, [articles]);
@@ -303,7 +279,7 @@ export default function App() {
 
   const handleNewArticle = () => {
     const newId = Date.now().toString();
-    const newArticle: Article = { id: newId, title: 'Untitled', content: '', updatedAt: Date.now() };
+    const newArticle: Article = { id: newId, title: t.ui.untitled, content: '', updatedAt: Date.now() };
     setArticles(prev => [newArticle, ...prev]);
     setCurrentArticleId(newId);
     setText('');
@@ -327,10 +303,10 @@ export default function App() {
   const handleDeleteArticle = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
     if (articles.length <= 1) {
-      showToast('至少保留一篇文章', 'error');
+      showToast(t.ui.minArticleWarning, 'error');
       return;
     }
-    if (!window.confirm('确定删除这篇文章吗？')) return;
+    if (!window.confirm(t.ui.deleteConfirm)) return;
 
     const newArticles = articles.filter(a => a.id !== id);
     setArticles(newArticles);
@@ -434,7 +410,7 @@ export default function App() {
     if (!snapshot) return;
     setText(snapshot);
     setUndoSnapshot(null);
-    showToast('已撤销上次修改', 'info');
+    showToast(t.ui.toast.undo, 'info');
   };
 
   const handleUndo = () => {
@@ -447,7 +423,7 @@ export default function App() {
         await navigator.clipboard.writeText(value);
         return true;
       } catch {
-        // fall back to execCommand
+        // fall back
       }
     }
     const el = document.createElement('textarea');
@@ -475,7 +451,7 @@ export default function App() {
         await navigator.clipboard.write([item]);
         return true;
       } catch {
-        // fall back to execCommand
+        // fall back
       }
     }
     const container = document.createElement('div');
@@ -501,21 +477,21 @@ export default function App() {
 
   const handleCopyMarkdown = async () => {
     if (!text.trim()) {
-      showToast('没有可复制的内容', 'info');
+      showToast(t.ui.toast.noContent, 'info');
       return;
     }
     const ok = await copyPlainTextToClipboard(text);
-    showToast(ok ? '已复制 Markdown' : '复制失败，请检查浏览器权限', ok ? 'success' : 'error');
+    showToast(ok ? t.ui.toast.copySuccessMD : t.ui.toast.copyFail, ok ? 'success' : 'error');
   };
 
   const handleCopyRichText = async () => {
     if (!text.trim()) {
-      showToast('没有可复制的内容', 'info');
+      showToast(t.ui.toast.noContent, 'info');
       return;
     }
     const html = renderMarkdownToHtml(text);
     const ok = await copyRichTextToClipboard(html, text);
-    showToast(ok ? '已复制 Rich Text' : '复制失败，请检查浏览器权限', ok ? 'success' : 'error');
+    showToast(ok ? t.ui.toast.copySuccessRT : t.ui.toast.copyFail, ok ? 'success' : 'error');
   };
 
   const handleActionMouseDown = (e: React.MouseEvent) => {
@@ -526,7 +502,7 @@ export default function App() {
   const handleStartRecording = async () => {
     if (recordingState === 'recording' || recordingState === 'transcribing') return;
     if (!navigator.mediaDevices?.getUserMedia) {
-      showToast('当前浏览器不支持录音', 'error');
+      showToast(t.ui.toast.browserNotSupport, 'error');
       return;
     }
     try {
@@ -539,7 +515,7 @@ export default function App() {
       };
 
       recorder.onerror = () => {
-        showToast('录音失败，请重试', 'error');
+        showToast(t.ui.toast.recordFail, 'error');
         setRecordingState('error');
       };
 
@@ -556,9 +532,9 @@ export default function App() {
       recorderRef.current = recorder;
       setRecordingState('recording');
       recorder.start();
-      showToast('录音中，完成后再点击停止', 'info');
-    } catch (error) {
-      showToast('无法开始录音，请检查麦克风权限', 'error');
+      showToast(t.ui.toast.recording, 'info');
+    } catch {
+      showToast(t.ui.toast.micPermission, 'error');
       setRecordingState('error');
     }
   };
@@ -571,7 +547,7 @@ export default function App() {
       cancelledByUserRef.current = true;
       transcribeAbortRef.current?.abort();
       setRecordingState('idle');
-      showToast('已取消转写', 'info');
+      showToast(t.ui.toast.cancelTranscribing, 'info');
     } else if (recordingState === 'error') {
       if (lastAudioBlobRef.current) {
         transcribeAudio(lastAudioBlobRef.current);
@@ -640,10 +616,10 @@ export default function App() {
       // ignore
     }
     if (res.status === 401 || res.status === 403) {
-      return '鉴权失败，请在 .env 设置有效的 token';
+      return t.ui.toast.authFail;
     }
-    if (res.status === 422) return detail || '参数校验失败，请检查内容';
-    return detail || `请求失败 (${res.status})`;
+    if (res.status === 422) return detail || t.ui.toast.paramFail;
+    return detail || t.ui.toast.reqFail(res.status);
   };
 
   const transcribeAudio = async (blob: Blob) => {
@@ -671,7 +647,7 @@ export default function App() {
       }
       const data = await res.json();
       const transcript: string = data?.text || data?.transcript || '';
-      if (!transcript) throw new Error('未收到转写文本');
+      if (!transcript) throw new Error(t.ui.toast.noTranscript);
       setText((prev) => {
         const [start, end] = clampRange(lastCursorRef.current.start, lastCursorRef.current.end, prev.length);
         const next = `${prev.slice(0, start)}${transcript}${prev.slice(end)}`;
@@ -680,22 +656,22 @@ export default function App() {
         return next;
       });
       setRecordingState('idle');
-      showToast('已插入转写文本', 'success');
+      showToast(t.ui.toast.insertTranscript, 'success');
     } catch (error) {
       const userCancelled = cancelledByUserRef.current;
       if (userCancelled) {
-        showToast('已取消转写', 'info');
+        showToast(t.ui.toast.cancelTranscribing, 'info');
         setRecordingState('idle');
         return;
       }
       const message =
         error instanceof Error && error.message === 'timeout'
-          ? '转写超时，请重试'
+          ? t.ui.toast.transcribeTimeout
           : error instanceof Error
             ? error.message
-            : '转写失败';
+            : t.ui.toast.transcribeFail;
       setRecordingState('error');
-      showToast(message, 'error', lastAudioBlobRef.current ? { label: '重试', onClick: () => transcribeAudio(lastAudioBlobRef.current!) } : undefined);
+      showToast(message, 'error', lastAudioBlobRef.current ? { label: t.ui.toast.retry, onClick: () => transcribeAudio(lastAudioBlobRef.current!) } : undefined);
     } finally {
       transcribeAbortRef.current = null;
       cancelledByUserRef.current = false;
@@ -708,7 +684,7 @@ export default function App() {
       chatAbortRef.current?.abort();
       setActionState('idle');
       setActiveAction(null);
-      showToast('已取消处理', 'info');
+      showToast(t.ui.toast.cancelProcessing, 'info');
       return;
     }
     const liveSel = readSelection();
@@ -717,17 +693,15 @@ export default function App() {
     const selectedText = hasSelection ? text.slice(selStart, selEnd) : '';
     const targetText = selectedText || text;
     if (!targetText.trim()) {
-      showToast('请输入内容后再处理', 'info');
+      showToast(t.ui.toast.inputFirst, 'info');
       return;
     }
     if (!hasSelection && text.length > LONG_TEXT_THRESHOLD) {
-      const proceed = window.confirm(
-        `${action === 'polish' ? 'Polish 更适合分段处理，' : ''}当前正文较长，建议选中段落再处理以节省成本并降低误改。仍要继续吗？`,
-      );
+      const proceed = window.confirm(t.ui.toast.longTextWarning(action));
       if (!proceed) return;
     }
-    const userMessage = hasSelection ? selectionUserTemplate(selectedText) : fullUserTemplate(text);
-    const systemMessage = action === 'fix' ? FIX_SYSTEM_PROMPT : POLISH_SYSTEM_PROMPT;
+    const userMessage = hasSelection ? t.prompts.selectionUser(selectedText) : t.prompts.fullUser(text);
+    const systemMessage = action === 'fix' ? t.prompts.fixSystem : t.prompts.polishSystem;
     const body = {
       model: 'deepseek',
       tool_choice: 'none',
@@ -741,13 +715,12 @@ export default function App() {
     cancelledByUserRef.current = false;
     chatAbortRef.current = controller;
     
-    // Capture snapshot locally to ensure it's available immediately in the async closure
     const currentSnapshot = text;
     setUndoSnapshot(currentSnapshot);
     
     setActionState('processing');
     setActiveAction(action);
-    showToast(`${action === 'fix' ? 'Fix' : 'Polish'} 处理中...`, 'info');
+    showToast(t.ui.toast.processing, 'info');
 
     let accumulatedContent = '';
     
@@ -765,7 +738,7 @@ export default function App() {
       }
 
       const reader = res.body?.getReader();
-      if (!reader) throw new Error('无法读取响应流');
+      if (!reader) throw new Error('Cannot read response stream');
       
       const decoder = new TextDecoder();
       let buffer = '';
@@ -787,15 +760,12 @@ export default function App() {
               const delta = json.choices?.[0]?.delta?.content || '';
               if (delta) {
                 accumulatedContent += delta;
-                
-                // Real-time update
                 setText(() => {
-                  // Always reconstruct from the LOCAL snapshot
                   const original = currentSnapshot; 
                   if (hasSelection) {
                     return `${original.slice(0, selStart)}${accumulatedContent}${original.slice(selEnd)}`;
                   }
-                  return accumulatedContent; // For full text replacement
+                  return accumulatedContent;
                 });
               }
             } catch (e) {
@@ -805,9 +775,8 @@ export default function App() {
         }
       }
       
-      // Final sanitization
       const finalContent = sanitizeModelText(accumulatedContent);
-      if (!finalContent || !finalContent.trim()) throw new Error('返回为空，请重试');
+      if (!finalContent || !finalContent.trim()) throw new Error(t.ui.toast.fail);
       
       setText(() => {
         const original = currentSnapshot;
@@ -820,26 +789,24 @@ export default function App() {
         return finalContent;
       });
 
-      showToast(`已应用 ${action === 'fix' ? 'Fix' : 'Polish'}`, 'success', {
-        label: '撤销',
+      showToast(t.ui.toast.applied(action), 'success', {
+        label: t.ui.toast.undoAction,
         onClick: () => applyUndoSnapshot(currentSnapshot),
       });
     } catch (error) {
       const userCancelled = cancelledByUserRef.current;
       if (userCancelled) {
-        showToast('已取消处理', 'info');
-        // Revert to undo snapshot if cancelled?
+        showToast(t.ui.toast.cancelProcessing, 'info');
         if (undoSnapshot) setText(undoSnapshot);
         return;
       }
       const message =
         error instanceof Error && error.message === 'timeout'
-          ? '请求超时，请重试'
+          ? t.ui.toast.timeout
           : error instanceof Error
             ? error.message
-            : '处理失败';
+            : t.ui.toast.fail;
       showToast(message, 'error');
-      // On error, revert changes to avoid partial text
       if (undoSnapshot) setText(undoSnapshot);
     } finally {
       chatAbortRef.current = null;
@@ -850,17 +817,17 @@ export default function App() {
   };
 
   const renderRecordLabel = () => {
-    if (recordingState === 'recording') return '停止录音';
-    if (recordingState === 'transcribing') return '转写中... (点击取消)';
-    if (recordingState === 'error') return '重试转写';
-    return '开始录音';
+    if (recordingState === 'recording') return t.ui.stopRecording;
+    if (recordingState === 'transcribing') return t.ui.transcribingCancel;
+    if (recordingState === 'error') return t.ui.retryTranscribing;
+    return t.ui.startRecording;
   };
 
   const liveStatusText = () => {
-    if (recordingState === 'transcribing') return '正在转写录音...';
-    if (actionState === 'processing' && activeAction === 'fix') return '正在 Fix，稍等...';
-    if (actionState === 'processing' && activeAction === 'polish') return '正在 Polish，稍等...';
-    if (recordingState === 'recording') return '录音中，点击停止以转写';
+    if (recordingState === 'transcribing') return t.ui.liveTranscribing;
+    if (actionState === 'processing' && activeAction === 'fix') return t.ui.liveFixing;
+    if (actionState === 'processing' && activeAction === 'polish') return t.ui.livePolishing;
+    if (recordingState === 'recording') return t.ui.liveRecording;
     return '';
   };
 
@@ -954,7 +921,8 @@ export default function App() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isMac, recordingState, handleStartRecording, handleStopRecording, runTextAction]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isMac, recordingState]);
 
   return (
     <div className={`app-shell ${focusMode ? 'focus' : ''}`}>
@@ -965,12 +933,12 @@ export default function App() {
       >
         <div className="sidebar-header">
           <button className="btn primary small" onClick={handleNewArticle}>
-            + 新建
+            {t.ui.new}
           </button>
           <button 
             className="btn ghost icon-only" 
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            title={sidebarCollapsed ? "展开" : "收起"}
+            title={sidebarCollapsed ? t.ui.expand : t.ui.collapse}
           >
             {sidebarCollapsed ? '»' : '«'}
           </button>
@@ -984,7 +952,7 @@ export default function App() {
                   className={`article-item ${article.id === currentArticleId ? 'active' : ''}`}
                   onClick={() => handleSelectArticle(article.id)}
                >
-                 <div className="article-title">{article.title || 'Untitled'}</div>
+                 <div className="article-title">{article.title || t.ui.untitled}</div>
                  <div className="article-date">
                     {new Date(article.updatedAt).toLocaleString(undefined, {
                       month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit'
@@ -993,8 +961,8 @@ export default function App() {
                  <button 
                     className="delete-btn" 
                     onClick={(e) => handleDeleteArticle(e, article.id)}
-                    title="删除"
-                 >
+                    title={t.ui.delete}
+                  >
                    ×
                  </button>
                </div>
@@ -1004,14 +972,34 @@ export default function App() {
         {!sidebarCollapsed && (
           <div className="resizer" onMouseDown={startResizing} />
         )}
+        
+        {!sidebarCollapsed && (
+          <div className="sidebar-footer">
+            <div className="lang-switcher">
+               <button 
+                 className={`btn link small ${lang === 'en' ? 'active' : ''}`} 
+                 onClick={() => changeLanguage('en')}
+               >
+                 EN
+               </button>
+               <span className="sep">|</span>
+               <button 
+                 className={`btn link small ${lang === 'zh' ? 'active' : ''}`} 
+                 onClick={() => changeLanguage('zh')}
+               >
+                 中
+               </button>
+            </div>
+          </div>
+        )}
       </aside>
 
       <div className="main-content">
         <header className="hero">
           <div className="hero-text">
             <p className="eyebrow">FlowPaste</p>
-            <h1>语音转写，一键润色，创作永不中断</h1>
-            <p className="subline">录音、转写、修正、润色全流程一屏搞定。无需频繁复制粘贴，多文档轻松切换，数据本地存储，安全更私密。</p>
+            <h1>{t.ui.heroTitle}</h1>
+            <p className="subline">{t.ui.heroSubtitle}</p>
           </div>
         </header>
 
@@ -1022,7 +1010,7 @@ export default function App() {
               data-testid="editor"
               className="editor"
               value={text}
-              placeholder="开始口述或粘贴你的 Markdown 草稿；录音结束会自动插入转写。选中段落后点击 Fix/Polish 直接替换。"
+              placeholder={t.ui.editorPlaceholder}
               onChange={(e) => setText(e.target.value)}
               onSelect={updateSelectionFromTextarea}
               onKeyUp={updateSelectionFromTextarea}
@@ -1030,7 +1018,7 @@ export default function App() {
             />
           ) : (
             <div className="preview-pane" data-testid="wysiwyg-pane">
-              <div className="preview-head">Rich Text (可直接修改，自动同步 Markdown)</div>
+              <div className="preview-head">{t.ui.richTextHeader}</div>
               <div
                 ref={wysiwygRef}
                 className="wysiwyg"
@@ -1057,12 +1045,12 @@ export default function App() {
             </button>
             {recordingState === 'recording' && (
               <button className="btn ghost" onMouseDown={(e) => e.preventDefault()} onClick={handleStopRecording}>
-                停止
+                {t.ui.stop}
               </button>
             )}
             {recordingState === 'transcribing' && (
               <button className="btn ghost" onMouseDown={(e) => e.preventDefault()} onClick={handleStopRecording}>
-                取消转写
+                {t.ui.cancelTranscribing}
               </button>
             )}
           </div>
@@ -1073,11 +1061,11 @@ export default function App() {
               className="btn"
               onMouseDown={handleActionMouseDown}
               onClick={() => runTextAction('fix')}
-              title={`快捷键：${shortcutHints.fix}`}
+              title={`Shortcut: ${shortcutHints.fix}`}
               aria-keyshortcuts={isMac ? 'Meta+Shift+F' : 'Control+Shift+F'}
             >
               <span className="btn-label">
-                {activeAction === 'fix' && actionState === 'processing' ? 'Fix 中…(点击取消)' : 'Fix'}
+                {activeAction === 'fix' && actionState === 'processing' ? t.ui.fixProcessing : 'Fix'}
               </span>
               <span className="btn-shortcut" aria-hidden="true">
                 {shortcutHints.fix}
@@ -1088,11 +1076,11 @@ export default function App() {
               className="btn"
               onMouseDown={handleActionMouseDown}
               onClick={() => runTextAction('polish')}
-              title={`快捷键：${shortcutHints.polish}`}
+              title={`Shortcut: ${shortcutHints.polish}`}
               aria-keyshortcuts={isMac ? 'Meta+Shift+P' : 'Control+Shift+P'}
             >
               <span className="btn-label">
-                {activeAction === 'polish' && actionState === 'processing' ? 'Polish 中…(点击取消)' : 'Polish'}
+                {activeAction === 'polish' && actionState === 'processing' ? t.ui.polishProcessing : 'Polish'}
               </span>
               <span className="btn-shortcut" aria-hidden="true">
                 {shortcutHints.polish}
@@ -1123,20 +1111,18 @@ export default function App() {
               className={`btn ghost small ${canCopy ? '' : 'disabled'}`}
               onClick={handleCopyMarkdown}
               disabled={!canCopy}
-              title="复制 Markdown"
-              aria-label="复制 Markdown"
+              title={t.ui.copyMD}
             >
-              复制 MD
+              {t.ui.copyMD}
             </button>
             <button
               data-testid="copy-rich-text-button"
               className={`btn ghost small ${canCopy ? '' : 'disabled'}`}
               onClick={handleCopyRichText}
               disabled={!canCopy}
-              title="复制 Rich Text"
-              aria-label="复制 Rich Text"
+              title={t.ui.copyRT}
             >
-              复制 RT
+              {t.ui.copyRT}
             </button>
           </div>
 
@@ -1147,10 +1133,10 @@ export default function App() {
               disabled={!undoSnapshot}
               onClick={handleUndo}
             >
-              撤销
+              {t.ui.undo}
             </button>
             <button className="btn ghost" onClick={() => setFocusMode((v) => !v)} data-testid="focus-button">
-              {focusMode ? '退出专注' : '专注模式'}
+              {focusMode ? t.ui.exitFocus : t.ui.focusMode}
             </button>
           </div>
 
@@ -1158,12 +1144,12 @@ export default function App() {
             <span className="dot" data-testid="recording-status" aria-label={recordingState} />
             <span>
               {recordingState === 'recording'
-                ? '录音中'
+                ? t.ui.recordingStatus
                 : recordingState === 'transcribing'
-                  ? '转写中'
+                  ? t.ui.transcribingStatus
                   : recordingState === 'error'
-                    ? '录音失败，可重试'
-                    : '空闲'}
+                    ? t.ui.errorStatus
+                    : t.ui.idleStatus}
             </span>
             {liveStatusText() && (
               <span className="live-chip">
@@ -1189,7 +1175,7 @@ export default function App() {
               {toast.action.label}
             </button>
           )}
-          <button className="link" onClick={() => setToast(null)} aria-label="关闭提示">
+          <button className="link" onClick={() => setToast(null)} aria-label="Close">
             ×
           </button>
         </div>

@@ -166,6 +166,39 @@
   border-color: var(--error);
 }
 
+/* Sidebar Footer / Lang Switcher */
+.sidebar-footer {
+  padding: 16px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: center;
+}
+
+.lang-switcher {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lang-switcher .btn.link {
+  background: none;
+  border: none;
+  color: var(--muted);
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.lang-switcher .btn.link.active {
+  color: var(--accent);
+}
+
+.lang-switcher .sep {
+  color: var(--border);
+  font-size: 12px;
+}
+
 /* Main Content */
 .main-content {
   flex: 1;
