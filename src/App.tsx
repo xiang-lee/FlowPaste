@@ -632,6 +632,11 @@ export default function App() {
         (signal) => {
           const fd = new FormData();
           fd.append('audio_file', blob, 'recording.webm');
+          if (lang === 'zh') {
+              fd.append('language', 'zh-CN');
+          } else {
+              fd.append('language', 'en');
+          }
           return fetch(`${BASE_URL}/v1/audio/transcriptions`, {
             method: 'POST',
             headers: baseHeaders,
