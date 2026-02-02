@@ -978,25 +978,6 @@ export default function App() {
           <div className="resizer" onMouseDown={startResizing} />
         )}
         
-        {!sidebarCollapsed && (
-          <div className="sidebar-footer">
-            <div className="lang-switcher">
-               <button 
-                 className={`btn link small ${lang === 'en' ? 'active' : ''}`} 
-                 onClick={() => changeLanguage('en')}
-               >
-                 EN
-               </button>
-               <span className="sep">|</span>
-               <button 
-                 className={`btn link small ${lang === 'zh' ? 'active' : ''}`} 
-                 onClick={() => changeLanguage('zh')}
-               >
-                 中
-               </button>
-            </div>
-          </div>
-        )}
       </aside>
 
       <div className="main-content">
@@ -1142,6 +1123,22 @@ export default function App() {
             </button>
             <button className="btn ghost" onClick={() => setFocusMode((v) => !v)} data-testid="focus-button">
               {focusMode ? t.ui.exitFocus : t.ui.focusMode}
+            </button>
+          </div>
+
+          <div className="btn-group lang-switcher" aria-label={t.ui.language}>
+            <button
+              className={`btn ghost small ${lang === 'en' ? 'active' : ''}`}
+              onClick={() => changeLanguage('en')}
+            >
+              EN
+            </button>
+            <span className="sep" aria-hidden="true">|</span>
+            <button
+              className={`btn ghost small ${lang === 'zh' ? 'active' : ''}`}
+              onClick={() => changeLanguage('zh')}
+            >
+              中
             </button>
           </div>
 
