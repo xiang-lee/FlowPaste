@@ -218,6 +218,7 @@ export default function App() {
   const chatAbortRef = useRef<AbortController | null>(null);
   const cancelledByUserRef = useRef(false);
   const lastCursorRef = useRef({ start: 0, end: 0 });
+  const runTextActionRef = useRef<(action: ActionType) => void>(() => {});
 
   const { toast, setToast } = useToast();
 
@@ -821,6 +822,12 @@ export default function App() {
     }
   };
 
+  useEffect(() => {
+    runTextActionRef.current = (action: ActionType) => {
+      void runTextAction(action);
+    };
+  }, [runTextAction]);
+
   const renderRecordLabel = () => {
     if (recordingState === 'recording') return t.ui.stopRecording;
     if (recordingState === 'transcribing') return t.ui.transcribingCancel;
@@ -916,18 +923,17 @@ export default function App() {
       if (event.repeat) return;
       if (matchesShortcut(event, 'f')) {
         event.preventDefault();
-        runTextAction('fix');
+        runTextActionRef.current('fix');
         return;
       }
       if (matchesShortcut(event, 'p')) {
         event.preventDefault();
-        runTextAction('polish');
+        runTextActionRef.current('polish');
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isMac, recordingState]);
+  }, [isMac]);
 
   return (
     <div className={`app-shell ${focusMode ? 'focus' : ''}`}>

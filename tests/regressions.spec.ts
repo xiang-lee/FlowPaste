@@ -113,3 +113,21 @@ test('Regression: Missing Token should not crash/block but allow Proxy to handle
     
     expect(requestMade).toBe(true);
 });
+
+test('Regression: Keyboard shortcuts should use latest editor content', async ({ page }) => {
+  await page.route(completionRoute, (route) =>
+    route.fulfill({
+      contentType: 'text/event-stream',
+      body: `data: {"choices":[{"delta":{"content":"This text is fixed"}}]}\n\ndata: [DONE]\n\n`,
+    }),
+  );
+
+  await page.goto('/');
+  const editor = page.getByTestId('editor');
+  await editor.fill('Ths txt');
+  await editor.selectText();
+
+  await page.keyboard.press('Control+Shift+F');
+
+  await expect(editor).toHaveValue('This text is fixed');
+});
