@@ -131,3 +131,26 @@ test('Regression: Keyboard shortcuts should use latest editor content', async ({
 
   await expect(editor).toHaveValue('This text is fixed');
 });
+
+test('Regression: Undo snapshot should reset when switching articles', async ({ page }) => {
+  await page.route(completionRoute, (route) =>
+    route.fulfill({
+      contentType: 'text/event-stream',
+      body: `data: {"choices":[{"delta":{"content":"This is fixed"}}]}\n\ndata: [DONE]\n\n`,
+    }),
+  );
+
+  await page.goto('/');
+  const editor = page.getByTestId('editor');
+  const undoButton = page.getByTestId('undo-button');
+
+  await editor.fill('Ths is bad');
+  await editor.selectText();
+  await page.getByTestId('fix-button').click();
+  await expect(undoButton).toBeEnabled();
+
+  await page.locator('.sidebar-header .btn.ghost.icon-only').click();
+  await page.locator('.sidebar-header .btn.primary.small').click();
+  await expect(editor).toHaveValue('');
+  await expect(undoButton).toBeDisabled();
+});

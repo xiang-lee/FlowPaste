@@ -284,6 +284,7 @@ export default function App() {
     setArticles(prev => [newArticle, ...prev]);
     setCurrentArticleId(newId);
     setText('');
+    setUndoSnapshot(null);
     if (window.innerWidth < 900) {
         setSidebarCollapsed(true);
     }
@@ -295,6 +296,7 @@ export default function App() {
     if (article) {
       setCurrentArticleId(id);
       setText(article.content);
+      setUndoSnapshot(null);
       if (window.innerWidth < 900) {
         setSidebarCollapsed(true);
       }
@@ -316,6 +318,7 @@ export default function App() {
       const next = newArticles[0];
       setCurrentArticleId(next.id);
       setText(next.content);
+      setUndoSnapshot(null);
     }
   };
 
