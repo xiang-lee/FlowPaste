@@ -806,7 +806,7 @@ export default function App() {
       const userCancelled = cancelledByUserRef.current;
       if (userCancelled) {
         showToast(t.ui.toast.cancelProcessing, 'info');
-        if (undoSnapshot) setText(undoSnapshot);
+        setText(currentSnapshot);
         return;
       }
       const message =
@@ -816,7 +816,7 @@ export default function App() {
             ? error.message
             : t.ui.toast.fail;
       showToast(message, 'error');
-      if (undoSnapshot) setText(undoSnapshot);
+      setText(currentSnapshot);
     } finally {
       chatAbortRef.current = null;
       cancelledByUserRef.current = false;

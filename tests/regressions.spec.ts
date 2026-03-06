@@ -154,3 +154,22 @@ test('Regression: Undo snapshot should reset when switching articles', async ({ 
   await expect(editor).toHaveValue('');
   await expect(undoButton).toBeDisabled();
 });
+
+test('Regression: Failed stream after partial update should restore original text', async ({ page }) => {
+  await page.route(completionRoute, (route) =>
+    route.fulfill({
+      contentType: 'text/event-stream',
+      body: `data: {"choices":[{"delta":{"content":"   "}}]}\n\ndata: [DONE]\n\n`,
+    }),
+  );
+
+  await page.goto('/');
+  const editor = page.getByTestId('editor');
+  await editor.fill('Original text');
+  await editor.selectText();
+
+  await page.getByTestId('fix-button').click();
+
+  await expect(editor).toHaveValue('Original text');
+  await expect(page.getByTestId('toast')).toBeVisible();
+});
