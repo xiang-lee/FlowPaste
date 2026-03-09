@@ -59,6 +59,27 @@ test.describe('Article Management', () => {
     await expect(editor).toHaveValue('Article B');
   });
 
+  test('Sidebar: Recently edited article moves to top', async ({ page }) => {
+    await page.locator('.sidebar-header .btn.ghost.icon-only').click();
+
+    const editor = page.getByTestId('editor');
+    await editor.fill('Article A');
+
+    await page.locator('.sidebar-header .btn.primary.small').click();
+    await editor.fill('Article B');
+
+    const articles = page.locator('.article-item');
+    await expect(articles.first()).toContainText('Article B');
+
+    await articles.nth(1).click();
+    await expect(editor).toHaveValue('Article A');
+
+    await editor.fill('Article A updated');
+
+    await expect(articles.first()).toContainText('Article A updated');
+    await expect(articles.nth(1)).toContainText('Article B');
+  });
+
   test('Sidebar: Delete article', async ({ page }) => {
     // Open sidebar first
     await page.getByTitle('展开').click();

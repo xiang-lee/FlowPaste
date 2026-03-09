@@ -74,6 +74,12 @@ type Article = {
   updatedAt: number;
 };
 
+const sortArticlesByRecent = (articles: Article[]) =>
+  [...articles].sort((a, b) => {
+    if (b.updatedAt !== a.updatedAt) return b.updatedAt - a.updatedAt;
+    return b.id.localeCompare(a.id);
+  });
+
 const LONG_TEXT_THRESHOLD = 8000;
 const BASE_URL = '/api';
 const TOKEN = import.meta.env.VITE_AI_BUILDER_TOKEN;
@@ -127,6 +133,7 @@ export default function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [sidebarWidth, setSidebarWidth] = useState(220);
   const isResizingRef = useRef(false);
+  const sortedArticles = useMemo(() => sortArticlesByRecent(articles), [articles]);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -315,7 +322,7 @@ export default function App() {
     setArticles(newArticles);
 
     if (currentArticleId === id) {
-      const next = newArticles[0];
+      const next = sortArticlesByRecent(newArticles)[0];
       setCurrentArticleId(next.id);
       setText(next.content);
       setUndoSnapshot(null);
@@ -960,7 +967,7 @@ export default function App() {
         
         {!sidebarCollapsed && (
           <div className="article-list"> 
-             {articles.map(article => (
+             {sortedArticles.map(article => (
                <div 
                   key={article.id} 
                   className={`article-item ${article.id === currentArticleId ? 'active' : ''}`}
