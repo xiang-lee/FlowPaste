@@ -83,6 +83,8 @@ const sortArticlesByRecent = (articles: Article[]) =>
 const LONG_TEXT_THRESHOLD = 8000;
 const BASE_URL = '/api';
 const TOKEN = import.meta.env.VITE_AI_BUILDER_TOKEN;
+const SIDEBAR_COLLAPSED_KEY = 'flowpaste_sidebar_collapsed';
+const SIDEBAR_WIDTH_KEY = 'flowpaste_sidebar_width';
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -130,8 +132,15 @@ export default function App() {
     return savedId || '';
   });
 
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
-  const [sidebarWidth, setSidebarWidth] = useState(220);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    const saved = localStorage.getItem(SIDEBAR_COLLAPSED_KEY);
+    return saved === null ? true : saved === 'true';
+  });
+  const [sidebarWidth, setSidebarWidth] = useState(() => {
+    const saved = Number(localStorage.getItem(SIDEBAR_WIDTH_KEY));
+    if (!Number.isFinite(saved)) return 220;
+    return Math.max(150, Math.min(saved, 600));
+  });
   const isResizingRef = useRef(false);
   const sortedArticles = useMemo(() => sortArticlesByRecent(articles), [articles]);
 
@@ -284,6 +293,14 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('flowpaste_current_id', currentArticleId);
   }, [currentArticleId]);
+
+  useEffect(() => {
+    localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(sidebarCollapsed));
+  }, [sidebarCollapsed]);
+
+  useEffect(() => {
+    localStorage.setItem(SIDEBAR_WIDTH_KEY, String(sidebarWidth));
+  }, [sidebarWidth]);
 
   const handleNewArticle = () => {
     const newId = Date.now().toString();

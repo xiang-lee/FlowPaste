@@ -105,15 +105,26 @@ test.describe('Article Management', () => {
 
   test('Sidebar: Collapse toggle', async ({ page }) => {
     const sidebar = page.locator('.sidebar');
-    const toggle = page.getByTitle('展开'); // Initial state title is "展开" because it starts collapsed
+    const toggle = page.locator('.sidebar-header .btn.ghost.icon-only');
     
     await expect(sidebar).toHaveClass(/collapsed/);
     
     await toggle.click();
     await expect(sidebar).not.toHaveClass(/collapsed/);
     
-    const collapseToggle = page.getByTitle('收起');
-    await collapseToggle.click();
+    await toggle.click();
     await expect(sidebar).toHaveClass(/collapsed/);
+  });
+
+  test('Sidebar: Collapse state survives reload', async ({ page }) => {
+    const sidebar = page.locator('.sidebar');
+    const toggle = page.locator('.sidebar-header .btn.ghost.icon-only');
+
+    await toggle.click();
+    await expect(sidebar).not.toHaveClass(/collapsed/);
+
+    await page.reload();
+
+    await expect(sidebar).not.toHaveClass(/collapsed/);
   });
 });
