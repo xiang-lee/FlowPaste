@@ -85,6 +85,7 @@ const BASE_URL = '/api';
 const TOKEN = import.meta.env.VITE_AI_BUILDER_TOKEN;
 const SIDEBAR_COLLAPSED_KEY = 'flowpaste_sidebar_collapsed';
 const SIDEBAR_WIDTH_KEY = 'flowpaste_sidebar_width';
+const VIEW_MODE_KEY = 'flowpaste_view_mode';
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -199,7 +200,10 @@ export default function App() {
   const [recordingState, setRecordingState] = useState<RecordingState>('idle');
   const [actionState, setActionState] = useState<'idle' | 'processing'>('idle');
   const [activeAction, setActiveAction] = useState<ActionType | null>(null);
-  const [viewMode, setViewMode] = useState<'markdown' | 'wysiwyg'>('markdown');
+  const [viewMode, setViewMode] = useState<'markdown' | 'wysiwyg'>(() => {
+    const saved = localStorage.getItem(VIEW_MODE_KEY);
+    return saved === 'wysiwyg' ? 'wysiwyg' : 'markdown';
+  });
   const isMac = useMemo(
     () => typeof navigator !== 'undefined' && /Mac|iPhone|iPad|iPod/.test(navigator.platform),
     [],
@@ -301,6 +305,10 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem(SIDEBAR_WIDTH_KEY, String(sidebarWidth));
   }, [sidebarWidth]);
+
+  useEffect(() => {
+    localStorage.setItem(VIEW_MODE_KEY, viewMode);
+  }, [viewMode]);
 
   const handleNewArticle = () => {
     const newId = Date.now().toString();

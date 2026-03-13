@@ -199,3 +199,19 @@ test('所见编辑模式可以输入并同步回 Markdown', async ({ page }) => 
   // Check if pane is visible
   await expect(page.getByTestId('wysiwyg-pane')).toBeVisible({ timeout: 10000 });
 });
+
+test('Rich Text 视图在刷新后保持选中', async ({ page }) => {
+  await page.goto('/');
+  const richTextBtn = page.getByTestId('rich-text-view-button');
+  const markdownBtn = page.getByTestId('markdown-view-button');
+
+  await richTextBtn.click();
+  await expect(richTextBtn).toHaveClass(/active/);
+  await expect(page.getByTestId('wysiwyg-pane')).toBeVisible({ timeout: 10000 });
+
+  await page.reload();
+
+  await expect(richTextBtn).toHaveClass(/active/);
+  await expect(markdownBtn).not.toHaveClass(/active/);
+  await expect(page.getByTestId('wysiwyg-pane')).toBeVisible({ timeout: 10000 });
+});
