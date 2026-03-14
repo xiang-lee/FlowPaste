@@ -956,6 +956,11 @@ export default function App() {
     };
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.repeat) return;
+      if (event.key === 'Escape' && focusMode) {
+        event.preventDefault();
+        setFocusMode(false);
+        return;
+      }
       if (matchesShortcut(event, 'f')) {
         event.preventDefault();
         runTextActionRef.current('fix');
@@ -968,7 +973,7 @@ export default function App() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isMac]);
+  }, [focusMode, isMac]);
 
   return (
     <div className={`app-shell ${focusMode ? 'focus' : ''}`}>

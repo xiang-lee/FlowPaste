@@ -215,3 +215,15 @@ test('Rich Text 视图在刷新后保持选中', async ({ page }) => {
   await expect(markdownBtn).not.toHaveClass(/active/);
   await expect(page.getByTestId('wysiwyg-pane')).toBeVisible({ timeout: 10000 });
 });
+
+test('Focus Mode 可以用 Escape 退出', async ({ page }) => {
+  await page.goto('/');
+  const focusButton = page.getByTestId('focus-button');
+
+  await focusButton.click();
+  await expect(focusButton).toHaveText(/Exit Focus|退出专注/);
+
+  await page.keyboard.press('Escape');
+
+  await expect(focusButton).toHaveText(/Focus Mode|专注模式/);
+});
