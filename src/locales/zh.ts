@@ -24,7 +24,7 @@ ${text}`
     expand: "展开",
     collapse: "收起",
     delete: "删除",
-    untitled: "Untitled",
+    untitled: "未命名",
     deleteConfirm: "确定删除这篇文章吗？",
     minArticleWarning: "至少保留一篇文章",
     heroTitle: "语音转写，一键润色，创作永不中断",

@@ -127,4 +127,15 @@ test.describe('Article Management', () => {
 
     await expect(sidebar).not.toHaveClass(/collapsed/);
   });
+
+  test('Sidebar: Empty article title follows current language', async ({ page }) => {
+    await page.locator('.sidebar-header .btn.ghost.icon-only').click();
+
+    const firstArticle = page.locator('.article-item').first();
+    await expect(firstArticle).toContainText('Untitled');
+
+    await page.getByRole('button', { name: '中' }).click();
+
+    await expect(firstArticle).toContainText('未命名');
+  });
 });

@@ -3,6 +3,8 @@ import TurndownService from 'turndown';
 import { marked } from 'marked';
 import './App.css';
 import { useI18n } from './hooks/useI18n';
+import { en } from './locales/en';
+import { zh } from './locales/zh';
 
 const injectBlankPlaceholders = (md: string) =>
   md.replace(/\n{3,}/g, (match) => {
@@ -86,6 +88,7 @@ const TOKEN = import.meta.env.VITE_AI_BUILDER_TOKEN;
 const SIDEBAR_COLLAPSED_KEY = 'flowpaste_sidebar_collapsed';
 const SIDEBAR_WIDTH_KEY = 'flowpaste_sidebar_width';
 const VIEW_MODE_KEY = 'flowpaste_view_mode';
+const UNTITLED_TITLES = new Set([en.ui.untitled, zh.ui.untitled]);
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -297,6 +300,20 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('flowpaste_current_id', currentArticleId);
   }, [currentArticleId]);
+
+  useEffect(() => {
+    setArticles((prev) => {
+      let changed = false;
+      const next = prev.map((article) => {
+        if (article.content.trim()) return article;
+        if (!UNTITLED_TITLES.has(article.title)) return article;
+        if (article.title === t.ui.untitled) return article;
+        changed = true;
+        return { ...article, title: t.ui.untitled };
+      });
+      return changed ? next : prev;
+    });
+  }, [t.ui.untitled]);
 
   useEffect(() => {
     localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(sidebarCollapsed));
