@@ -227,3 +227,17 @@ test('Focus Mode 可以用 Escape 退出', async ({ page }) => {
 
   await expect(focusButton).toHaveText(/Focus Mode|专注模式/);
 });
+
+test('Markdown can be downloaded as a file', async ({ page }) => {
+  await page.goto('/');
+  const editor = page.getByTestId('editor');
+  await editor.fill('Download me\n\nBody line');
+
+  const event = page.waitForEvent('download');
+  await page.getByTestId('download-markdown-button').click();
+  const download = await event;
+
+  expect(download.suggestedFilename()).toBe('Download me.md');
+  const path = await download.path();
+  expect(path).toBeTruthy();
+});

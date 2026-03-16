@@ -103,6 +103,11 @@ function clampRange(start: number, end: number, max: number) {
   return [Math.min(safeStart, safeEnd), Math.max(safeStart, safeEnd)] as const;
 }
 
+function filename(value: string) {
+  const safe = value.replace(/[<>:"/\\|?*\u0000-\u001f]/g, ' ').replace(/\s+/g, ' ').trim();
+  return safe || 'flowpaste';
+}
+
 function useToast() {
   const [toast, setToast] = useState<Toast | null>(null);
   useEffect(() => {
@@ -545,6 +550,24 @@ export default function App() {
     const html = renderMarkdownToHtml(text);
     const ok = await copyRichTextToClipboard(html, text);
     showToast(ok ? t.ui.toast.copySuccessRT : t.ui.toast.copyFail, ok ? 'success' : 'error');
+  };
+
+  const handleDownloadMarkdown = () => {
+    if (!text.trim()) {
+      showToast(t.ui.toast.noContent, 'info');
+      return;
+    }
+    const article = articles.find((item) => item.id === currentArticleId);
+    const name = filename(article?.title || text.trim().split('\n')[0] || t.ui.untitled);
+    const blob = new Blob([text], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${name}.md`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
   };
 
   const handleActionMouseDown = (e: React.MouseEvent) => {
@@ -1155,6 +1178,15 @@ export default function App() {
           </div>
 
           <div className="btn-group">
+            <button
+              data-testid="download-markdown-button"
+              className={`btn ghost small ${canCopy ? '' : 'disabled'}`}
+              onClick={handleDownloadMarkdown}
+              disabled={!canCopy}
+              title={t.ui.downloadMD}
+            >
+              {t.ui.downloadMD}
+            </button>
             <button
               data-testid="copy-markdown-button"
               className={`btn ghost small ${canCopy ? '' : 'disabled'}`}

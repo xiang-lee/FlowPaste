@@ -39,6 +39,7 @@ ${text}`
     cancelTranscribing: "Cancel Transcribe",
     fixProcessing: "Fixing... (Click to Cancel)",
     polishProcessing: "Polishing... (Click to Cancel)",
+    downloadMD: "Download MD",
     copyMD: "Copy MD",
     copyRT: "Copy RT",
     undo: "Undo",

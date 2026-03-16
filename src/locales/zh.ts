@@ -39,6 +39,7 @@ ${text}`
     cancelTranscribing: "取消转写",
     fixProcessing: "Fix 中…(点击取消)",
     polishProcessing: "Polish 中…(点击取消)",
+    downloadMD: "下载 MD",
     copyMD: "复制 MD",
     copyRT: "复制 RT",
     undo: "撤销",
