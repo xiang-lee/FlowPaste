@@ -53,6 +53,7 @@ ${text}`
     liveFixing: "Fixing, please wait...",
     livePolishing: "Polishing, please wait...",
     liveRecording: "Recording, click Stop to transcribe",
+    selectionStatus: (count: number) => `Selected ${count} chars`,
     toast: {
       undo: "Undid last change",
       noContent: "No content to copy",

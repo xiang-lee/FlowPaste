@@ -241,3 +241,12 @@ test('Markdown can be downloaded as a file', async ({ page }) => {
   const path = await download.path();
   expect(path).toBeTruthy();
 });
+
+test('Selection size is shown when text is highlighted', async ({ page }) => {
+  await page.goto('/');
+  const editor = page.getByTestId('editor');
+  await editor.fill('Hello world');
+  await editor.selectText();
+
+  await expect(page.getByTestId('selection-chip')).toHaveText('Selected 11 chars');
+});

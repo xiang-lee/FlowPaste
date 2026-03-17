@@ -923,6 +923,8 @@ export default function App() {
     recordingState === 'recording' ||
     actionState === 'processing';
   const canCopy = text.trim().length > 0;
+  const [selectionStart, selectionEnd] = clampRange(selection.start, selection.end, text.length);
+  const selectionSize = selectionEnd - selectionStart;
 
   const syncWysiwygFromMarkdown = (md: string) => {
     if (!wysiwygRef.current) return;
@@ -976,6 +978,17 @@ export default function App() {
   useEffect(() => {
     if (viewMode !== 'wysiwyg') return;
     const handleSelectionChange = () => captureWysiwygSelectionRange();
+    document.addEventListener('selectionchange', handleSelectionChange);
+    return () => document.removeEventListener('selectionchange', handleSelectionChange);
+  }, [viewMode]);
+
+  useEffect(() => {
+    if (viewMode !== 'markdown') return;
+    const handleSelectionChange = () => {
+      const el = textareaRef.current;
+      if (!el || document.activeElement !== el) return;
+      setSelection({ start: el.selectionStart, end: el.selectionEnd });
+    };
     document.addEventListener('selectionchange', handleSelectionChange);
     return () => document.removeEventListener('selectionchange', handleSelectionChange);
   }, [viewMode]);
@@ -1248,6 +1261,11 @@ export default function App() {
                     ? t.ui.errorStatus
                     : t.ui.idleStatus}
             </span>
+            {selectionSize > 0 && (
+              <span className="selection-chip" data-testid="selection-chip">
+                {t.ui.selectionStatus(selectionSize)}
+              </span>
+            )}
             {liveStatusText() && (
               <span className="live-chip">
                 <span className="spinner" aria-hidden="true" />

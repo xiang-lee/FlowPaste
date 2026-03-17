@@ -53,6 +53,7 @@ ${text}`
     liveFixing: "正在 Fix，稍等...",
     livePolishing: "正在 Polish，稍等...",
     liveRecording: "录音中，点击停止以转写",
+    selectionStatus: (count: number) => `已选 ${count} 字`,
     toast: {
       undo: "已撤销上次修改",
       noContent: "没有可复制的内容",
