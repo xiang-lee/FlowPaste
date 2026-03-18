@@ -247,6 +247,7 @@ export default function App() {
   const cancelledByUserRef = useRef(false);
   const lastCursorRef = useRef({ start: 0, end: 0 });
   const runTextActionRef = useRef<(action: ActionType) => void>(() => {});
+  const downloadMarkdownRef = useRef<() => void>(() => {});
 
   const { toast, setToast } = useToast();
 
@@ -903,6 +904,10 @@ export default function App() {
     };
   }, [runTextAction]);
 
+  useEffect(() => {
+    downloadMarkdownRef.current = handleDownloadMarkdown;
+  }, [handleDownloadMarkdown]);
+
   const renderRecordLabel = () => {
     if (recordingState === 'recording') return t.ui.stopRecording;
     if (recordingState === 'transcribing') return t.ui.transcribingCancel;
@@ -1007,11 +1012,20 @@ export default function App() {
       const modKey = isMac ? event.metaKey : event.ctrlKey;
       return modKey && event.shiftKey && !event.altKey && event.key.toLowerCase() === key;
     };
+    const matchesPrimaryShortcut = (event: KeyboardEvent, key: string) => {
+      const modKey = isMac ? event.metaKey : event.ctrlKey;
+      return modKey && !event.shiftKey && !event.altKey && event.key.toLowerCase() === key;
+    };
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.repeat) return;
       if (event.key === 'Escape' && focusMode) {
         event.preventDefault();
         setFocusMode(false);
+        return;
+      }
+      if (matchesPrimaryShortcut(event, 's')) {
+        event.preventDefault();
+        downloadMarkdownRef.current();
         return;
       }
       if (matchesShortcut(event, 'f')) {

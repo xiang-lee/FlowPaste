@@ -250,3 +250,17 @@ test('Selection size is shown when text is highlighted', async ({ page }) => {
 
   await expect(page.getByTestId('selection-chip')).toHaveText('Selected 11 chars');
 });
+
+test('Ctrl+S downloads the current markdown file', async ({ page }) => {
+  await page.goto('/');
+  const editor = page.getByTestId('editor');
+  await editor.fill('Shortcut save\n\nBody line');
+
+  const event = page.waitForEvent('download');
+  await page.keyboard.press('Control+S');
+  const download = await event;
+
+  expect(download.suggestedFilename()).toBe('Shortcut save.md');
+  const path = await download.path();
+  expect(path).toBeTruthy();
+});
