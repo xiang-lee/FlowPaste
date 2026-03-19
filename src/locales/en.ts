@@ -54,6 +54,7 @@ ${text}`
     livePolishing: "Polishing, please wait...",
     liveRecording: "Recording, click Stop to transcribe",
     selectionStatus: (count: number) => `Selected ${count} chars`,
+    documentStats: (chars: number, lines: number) => `${chars} chars · ${lines} line${lines === 1 ? '' : 's'}`,
     toast: {
       undo: "Undid last change",
       noContent: "No content to copy",

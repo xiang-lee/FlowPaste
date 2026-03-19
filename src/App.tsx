@@ -928,6 +928,7 @@ export default function App() {
     recordingState === 'recording' ||
     actionState === 'processing';
   const canCopy = text.trim().length > 0;
+  const lineCount = text ? text.split('\n').length : 0;
   const [selectionStart, selectionEnd] = clampRange(selection.start, selection.end, text.length);
   const selectionSize = selectionEnd - selectionStart;
 
@@ -1278,6 +1279,11 @@ export default function App() {
             {selectionSize > 0 && (
               <span className="selection-chip" data-testid="selection-chip">
                 {t.ui.selectionStatus(selectionSize)}
+              </span>
+            )}
+            {text.length > 0 && (
+              <span className="stats-chip" data-testid="document-stats">
+                {t.ui.documentStats(text.length, lineCount)}
               </span>
             )}
             {liveStatusText() && (
