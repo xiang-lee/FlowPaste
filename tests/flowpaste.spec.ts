@@ -242,6 +242,18 @@ test('Markdown can be downloaded as a file', async ({ page }) => {
   expect(path).toBeTruthy();
 });
 
+test('Download shows success feedback with filename', async ({ page }) => {
+  await page.goto('/');
+  const editor = page.getByTestId('editor');
+  await editor.fill('Download me\n\nBody line');
+
+  const event = page.waitForEvent('download');
+  await page.getByTestId('download-markdown-button').click();
+  await event;
+
+  await expect(page.getByTestId('toast')).toContainText('Downloaded Download me.md');
+});
+
 test('Selection size is shown when text is highlighted', async ({ page }) => {
   await page.goto('/');
   const editor = page.getByTestId('editor');

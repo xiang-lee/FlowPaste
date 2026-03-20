@@ -58,6 +58,8 @@ ${text}`
     toast: {
       undo: "Undid last change",
       noContent: "No content to copy",
+      downloadSuccess: (name: string) => `Downloaded ${name}`,
+      downloadFail: "Download failed",
       copySuccessMD: "Copied Markdown",
       copySuccessRT: "Copied Rich Text",
       copyFail: "Copy failed, check permissions",

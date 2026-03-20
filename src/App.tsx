@@ -559,16 +559,21 @@ export default function App() {
       return;
     }
     const article = articles.find((item) => item.id === currentArticleId);
-    const name = filename(article?.title || text.trim().split('\n')[0] || t.ui.untitled);
-    const blob = new Blob([text], { type: 'text/markdown;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${name}.md`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.setTimeout(() => URL.revokeObjectURL(url), 0);
+    const outputName = `${filename(article?.title || text.trim().split('\n')[0] || t.ui.untitled)}.md`;
+    try {
+      const blob = new Blob([text], { type: 'text/markdown;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = outputName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.setTimeout(() => URL.revokeObjectURL(url), 0);
+      showToast(t.ui.toast.downloadSuccess(outputName), 'success');
+    } catch {
+      showToast(t.ui.toast.downloadFail, 'error');
+    }
   };
 
   const handleActionMouseDown = (e: React.MouseEvent) => {

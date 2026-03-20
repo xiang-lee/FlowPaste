@@ -58,6 +58,8 @@ ${text}`
     toast: {
       undo: "已撤销上次修改",
       noContent: "没有可复制的内容",
+      downloadSuccess: (name: string) => `已下载 ${name}`,
+      downloadFail: "下载失败",
       copySuccessMD: "已复制 Markdown",
       copySuccessRT: "已复制 Rich Text",
       copyFail: "复制失败，请检查浏览器权限",
