@@ -366,6 +366,9 @@ export default function App() {
     }
     if (!window.confirm(t.ui.deleteConfirm)) return;
 
+    const previousArticles = articles;
+    const previousCurrentArticleId = currentArticleId;
+    const previousText = text;
     const newArticles = articles.filter(a => a.id !== id);
     setArticles(newArticles);
 
@@ -375,6 +378,17 @@ export default function App() {
       setText(next.content);
       setUndoSnapshot(null);
     }
+
+    showToast(t.ui.toast.articleDeleted, 'info', {
+      label: t.ui.toast.undoAction,
+      onClick: () => {
+        setArticles(previousArticles);
+        setCurrentArticleId(previousCurrentArticleId);
+        const restoredArticle = previousArticles.find((article) => article.id === previousCurrentArticleId);
+        setText(restoredArticle?.content ?? previousText);
+        setUndoSnapshot(null);
+      },
+    });
   };
 
   const baseHeaders = useMemo(() => {

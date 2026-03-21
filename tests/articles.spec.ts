@@ -82,13 +82,13 @@ test.describe('Article Management', () => {
 
   test('Sidebar: Delete article', async ({ page }) => {
     // Open sidebar first
-    await page.getByTitle('展开').click();
+    await page.locator('.sidebar-header .btn.ghost.icon-only').click();
     
     // Need at least 2 articles to delete one (logic constraint)
     const editor = page.getByTestId('editor');
     await editor.fill('To keep');
     
-    await page.getByText('+ 新建').click();
+    await page.locator('.sidebar-header .btn.primary.small').click();
     await editor.fill('To delete');
     
     // Confirm dialog
@@ -101,6 +101,30 @@ test.describe('Article Management', () => {
     
     await expect(page.locator('.article-item')).toHaveCount(1);
     await expect(editor).toHaveValue('To keep');
+  });
+
+  test('Sidebar: Delete article can be undone', async ({ page }) => {
+    await page.locator('.sidebar-header .btn.ghost.icon-only').click();
+
+    const editor = page.getByTestId('editor');
+    await editor.fill('To keep');
+
+    await page.locator('.sidebar-header .btn.primary.small').click();
+    await editor.fill('Delete me');
+
+    page.on('dialog', (dialog) => dialog.accept());
+
+    const firstArticle = page.locator('.article-item').first();
+    await firstArticle.hover();
+    await firstArticle.locator('.delete-btn').click();
+
+    await expect(page.locator('.article-item')).toHaveCount(1);
+    await expect(editor).toHaveValue('To keep');
+
+    await page.getByTestId('toast').getByRole('button', { name: 'Undo' }).click();
+
+    await expect(page.locator('.article-item')).toHaveCount(2);
+    await expect(editor).toHaveValue('Delete me');
   });
 
   test('Sidebar: Collapse toggle', async ({ page }) => {
