@@ -21,6 +21,7 @@ ${text}`
   },
   ui: {
     new: "+ New",
+    duplicate: "Duplicate",
     expand: "Expand",
     collapse: "Collapse",
     delete: "Delete",
@@ -55,10 +56,12 @@ ${text}`
     liveRecording: "Recording, click Stop to transcribe",
     selectionStatus: (count: number) => `Selected ${count} chars`,
     documentStats: (chars: number, lines: number) => `${chars} chars · ${lines} line${lines === 1 ? '' : 's'}`,
+    duplicateTitle: (title: string) => `${title} (copy)`,
     toast: {
       undo: "Undid last change",
       noContent: "No content to copy",
       articleDeleted: "Article deleted",
+      articleDuplicated: "Article duplicated",
       downloadSuccess: (name: string) => `Downloaded ${name}`,
       downloadFail: "Download failed",
       copySuccessMD: "Copied Markdown",

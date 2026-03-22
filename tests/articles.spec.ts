@@ -162,4 +162,20 @@ test.describe('Article Management', () => {
 
     await expect(firstArticle).toContainText('未命名');
   });
+
+  test('Toolbar: Duplicate current article', async ({ page }) => {
+    const editor = page.getByTestId('editor');
+    await editor.fill('Original title\nSecond line');
+
+    await page.getByTestId('duplicate-article-button').click();
+    await expect(editor).toHaveValue('Original title\nSecond line');
+    await expect(page.getByTestId('toast')).toContainText('Article duplicated');
+
+    await page.locator('.sidebar-header .btn.ghost.icon-only').click();
+    const articles = page.locator('.article-item');
+
+    await expect(articles).toHaveCount(2);
+    await expect(articles.first()).toContainText('Original title (copy)');
+    await expect(articles.nth(1)).toContainText('Original title');
+  });
 });

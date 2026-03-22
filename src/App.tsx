@@ -345,6 +345,27 @@ export default function App() {
     }
   };
 
+  const handleDuplicateArticle = () => {
+    const currentArticle = articles.find((article) => article.id === currentArticleId);
+    const baseTitle = text.trim().split('\n')[0] || currentArticle?.title || t.ui.untitled;
+    const newId = Date.now().toString();
+    const duplicatedArticle: Article = {
+      id: newId,
+      title: t.ui.duplicateTitle(baseTitle),
+      content: text,
+      updatedAt: Date.now(),
+    };
+    setArticles((prev) => [duplicatedArticle, ...prev]);
+    setCurrentArticleId(newId);
+    setText(text);
+    setSelection({ start: 0, end: 0 });
+    setUndoSnapshot(null);
+    showToast(t.ui.toast.articleDuplicated, 'success');
+    if (window.innerWidth < 900) {
+      setSidebarCollapsed(true);
+    }
+  };
+
   const handleSelectArticle = (id: string) => {
     if (id === currentArticleId) return;
     const article = articles.find(a => a.id === id);
@@ -1255,6 +1276,14 @@ export default function App() {
           </div>
 
           <div className="btn-group">
+            <button
+              data-testid="duplicate-article-button"
+              className="btn ghost"
+              onClick={handleDuplicateArticle}
+              title={t.ui.duplicate}
+            >
+              {t.ui.duplicate}
+            </button>
             <button
               data-testid="undo-button"
               className={`btn ${undoSnapshot ? '' : 'disabled'}`}

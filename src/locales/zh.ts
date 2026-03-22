@@ -21,6 +21,7 @@ ${text}`
   },
   ui: {
     new: "+ 新建",
+    duplicate: "复制副本",
     expand: "展开",
     collapse: "收起",
     delete: "删除",
@@ -55,10 +56,12 @@ ${text}`
     liveRecording: "录音中，点击停止以转写",
     selectionStatus: (count: number) => `已选 ${count} 字`,
     documentStats: (chars: number, lines: number) => `${chars} 字 · ${lines} 行`,
+    duplicateTitle: (title: string) => `${title} (副本)`,
     toast: {
       undo: "已撤销上次修改",
       noContent: "没有可复制的内容",
       articleDeleted: "已删除文章",
+      articleDuplicated: "已创建副本",
       downloadSuccess: (name: string) => `已下载 ${name}`,
       downloadFail: "下载失败",
       copySuccessMD: "已复制 Markdown",
