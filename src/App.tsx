@@ -150,8 +150,18 @@ export default function App() {
     if (!Number.isFinite(saved)) return 220;
     return Math.max(150, Math.min(saved, 600));
   });
+  const [articleQuery, setArticleQuery] = useState('');
   const isResizingRef = useRef(false);
   const sortedArticles = useMemo(() => sortArticlesByRecent(articles), [articles]);
+  const filteredArticles = useMemo(() => {
+    const query = articleQuery.trim().toLocaleLowerCase();
+    if (!query) return sortedArticles;
+    return sortedArticles.filter((article) => {
+      const title = article.title.toLocaleLowerCase();
+      const content = article.content.toLocaleLowerCase();
+      return title.includes(query) || content.includes(query);
+    });
+  }, [articleQuery, sortedArticles]);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -337,6 +347,7 @@ export default function App() {
     const newId = Date.now().toString();
     const newArticle: Article = { id: newId, title: t.ui.untitled, content: '', updatedAt: Date.now() };
     setArticles(prev => [newArticle, ...prev]);
+    setArticleQuery('');
     setCurrentArticleId(newId);
     setText('');
     setUndoSnapshot(null);
@@ -356,6 +367,7 @@ export default function App() {
       updatedAt: Date.now(),
     };
     setArticles((prev) => [duplicatedArticle, ...prev]);
+    setArticleQuery('');
     setCurrentArticleId(newId);
     setText(text);
     setSelection({ start: 0, end: 0 });
@@ -1104,13 +1116,24 @@ export default function App() {
         </div>
         
         {!sidebarCollapsed && (
-          <div className="article-list"> 
-             {sortedArticles.map(article => (
-               <div 
-                  key={article.id} 
-                  className={`article-item ${article.id === currentArticleId ? 'active' : ''}`}
-                  onClick={() => handleSelectArticle(article.id)}
-               >
+          <>
+            <div className="sidebar-search">
+              <input
+                data-testid="article-search-input"
+                className="sidebar-search-input"
+                type="search"
+                value={articleQuery}
+                onChange={(e) => setArticleQuery(e.target.value)}
+                placeholder={t.ui.articleSearchPlaceholder}
+              />
+            </div>
+            <div className="article-list"> 
+             {filteredArticles.map(article => (
+                <div 
+                   key={article.id} 
+                   className={`article-item ${article.id === currentArticleId ? 'active' : ''}`}
+                   onClick={() => handleSelectArticle(article.id)}
+                >
                  <div className="article-title">{article.title || t.ui.untitled}</div>
                  <div className="article-date">
                     {new Date(article.updatedAt).toLocaleString(undefined, {
@@ -1123,10 +1146,16 @@ export default function App() {
                     title={t.ui.delete}
                   >
                    ×
-                 </button>
-               </div>
-             ))}
-          </div>
+                  </button>
+                </div>
+              ))}
+              {filteredArticles.length === 0 && (
+                <div className="article-empty" data-testid="article-search-empty">
+                  {t.ui.noArticlesMatch}
+                </div>
+              )}
+            </div>
+          </>
         )}
         {!sidebarCollapsed && (
           <div className="resizer" onMouseDown={startResizing} />

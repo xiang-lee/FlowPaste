@@ -25,6 +25,8 @@ ${text}`
     expand: "Expand",
     collapse: "Collapse",
     delete: "Delete",
+    articleSearchPlaceholder: "Search articles",
+    noArticlesMatch: "No matching articles",
     untitled: "Untitled",
     deleteConfirm: "Delete this article?",
     minArticleWarning: "Keep at least one article",

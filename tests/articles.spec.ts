@@ -178,4 +178,24 @@ test.describe('Article Management', () => {
     await expect(articles.first()).toContainText('Original title (copy)');
     await expect(articles.nth(1)).toContainText('Original title');
   });
+
+  test('Sidebar: Search filters articles', async ({ page }) => {
+    await page.locator('.sidebar-header .btn.ghost.icon-only').click();
+
+    const editor = page.getByTestId('editor');
+    await editor.fill('Alpha note');
+
+    await page.locator('.sidebar-header .btn.primary.small').click();
+    await editor.fill('Beta note');
+
+    await page.getByTestId('article-search-input').fill('Alpha');
+
+    const articles = page.locator('.article-item');
+    await expect(articles).toHaveCount(1);
+    await expect(articles.first()).toContainText('Alpha note');
+
+    await page.getByTestId('article-search-input').fill('Gamma');
+    await expect(page.locator('.article-item')).toHaveCount(0);
+    await expect(page.getByTestId('article-search-empty')).toContainText('No matching articles');
+  });
 });

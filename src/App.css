@@ -96,6 +96,40 @@
   gap: 8px;
 }
 
+.sidebar-search {
+  padding: 12px 12px 0;
+}
+
+.sidebar-search-input {
+  width: 100%;
+  background: rgba(11, 15, 22, 0.9);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  outline: none;
+  font-size: 14px;
+}
+
+.sidebar-search-input:focus {
+  border-color: rgba(123, 224, 184, 0.55);
+  box-shadow: 0 0 0 3px rgba(123, 224, 184, 0.12);
+}
+
+.sidebar-search-input::placeholder {
+  color: var(--muted);
+}
+
+.article-empty {
+  padding: 16px 12px;
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+  border: 1px dashed rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
 .article-item {
   padding: 10px 12px;
   border-radius: 8px;
