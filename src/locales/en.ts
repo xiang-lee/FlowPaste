@@ -27,6 +27,7 @@ ${text}`
     delete: "Delete",
     articleSearchPlaceholder: "Search articles",
     noArticlesMatch: "No matching articles",
+    clearSearch: "Clear search",
     untitled: "Untitled",
     deleteConfirm: "Delete this article?",
     minArticleWarning: "Keep at least one article",

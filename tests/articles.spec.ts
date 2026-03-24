@@ -198,4 +198,27 @@ test.describe('Article Management', () => {
     await expect(page.locator('.article-item')).toHaveCount(0);
     await expect(page.getByTestId('article-search-empty')).toContainText('No matching articles');
   });
+
+  test('Sidebar: Search can be cleared quickly', async ({ page }) => {
+    await page.locator('.sidebar-header .btn.ghost.icon-only').click();
+
+    const editor = page.getByTestId('editor');
+    await editor.fill('Alpha note');
+
+    await page.locator('.sidebar-header .btn.primary.small').click();
+    await editor.fill('Beta note');
+
+    const search = page.getByTestId('article-search-input');
+    await search.fill('Alpha');
+    await expect(page.locator('.article-item')).toHaveCount(1);
+
+    await page.getByTestId('article-search-clear').click();
+    await expect(search).toHaveValue('');
+    await expect(page.locator('.article-item')).toHaveCount(2);
+
+    await search.fill('Beta');
+    await search.press('Escape');
+    await expect(search).toHaveValue('');
+    await expect(page.locator('.article-item')).toHaveCount(2);
+  });
 });

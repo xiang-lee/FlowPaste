@@ -249,6 +249,7 @@ export default function App() {
   const lastWysiwygRangeRef = useRef<Range | null>(null);
 
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const lastAudioBlobRef = useRef<Blob | null>(null);
@@ -376,6 +377,11 @@ export default function App() {
     if (window.innerWidth < 900) {
       setSidebarCollapsed(true);
     }
+  };
+
+  const clearArticleSearch = () => {
+    setArticleQuery('');
+    searchInputRef.current?.focus();
   };
 
   const handleSelectArticle = (id: string) => {
@@ -1118,14 +1124,35 @@ export default function App() {
         {!sidebarCollapsed && (
           <>
             <div className="sidebar-search">
-              <input
-                data-testid="article-search-input"
-                className="sidebar-search-input"
-                type="search"
-                value={articleQuery}
-                onChange={(e) => setArticleQuery(e.target.value)}
-                placeholder={t.ui.articleSearchPlaceholder}
-              />
+              <div className="sidebar-search-row">
+                <input
+                  ref={searchInputRef}
+                  data-testid="article-search-input"
+                  className="sidebar-search-input"
+                  type="search"
+                  value={articleQuery}
+                  onChange={(e) => setArticleQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape' && articleQuery) {
+                      e.preventDefault();
+                      clearArticleSearch();
+                    }
+                  }}
+                  placeholder={t.ui.articleSearchPlaceholder}
+                />
+                {articleQuery && (
+                  <button
+                    type="button"
+                    className="sidebar-search-clear"
+                    data-testid="article-search-clear"
+                    onClick={clearArticleSearch}
+                    aria-label={t.ui.clearSearch}
+                    title={t.ui.clearSearch}
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
             </div>
             <div className="article-list"> 
              {filteredArticles.map(article => (

@@ -27,6 +27,7 @@ ${text}`
     delete: "删除",
     articleSearchPlaceholder: "搜索文章",
     noArticlesMatch: "没有匹配的文章",
+    clearSearch: "清空搜索",
     untitled: "未命名",
     deleteConfirm: "确定删除这篇文章吗？",
     minArticleWarning: "至少保留一篇文章",
