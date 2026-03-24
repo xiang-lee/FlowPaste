@@ -104,7 +104,11 @@ function clampRange(start: number, end: number, max: number) {
 }
 
 function filename(value: string) {
-  const safe = value.replace(/[<>:"/\\|?*\u0000-\u001f]/g, ' ').replace(/\s+/g, ' ').trim();
+  const safe = Array.from(value, (char) => (char.charCodeAt(0) < 32 ? ' ' : char))
+    .join('')
+    .replace(/[<>:"/\\|?*]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
   return safe || 'flowpaste';
 }
 
@@ -222,6 +226,7 @@ export default function App() {
     const saved = localStorage.getItem(VIEW_MODE_KEY);
     return saved === 'wysiwyg' ? 'wysiwyg' : 'markdown';
   });
+  const [actionsMenuOpen, setActionsMenuOpen] = useState(false);
   const isMac = useMemo(
     () => typeof navigator !== 'undefined' && /Mac|iPhone|iPad|iPod/.test(navigator.platform),
     [],
@@ -250,6 +255,7 @@ export default function App() {
 
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const actionsMenuRef = useRef<HTMLDivElement | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const lastAudioBlobRef = useRef<Blob | null>(null);
@@ -343,6 +349,29 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem(VIEW_MODE_KEY, viewMode);
   }, [viewMode]);
+
+  useEffect(() => {
+    if (!actionsMenuOpen) return;
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (actionsMenuRef.current?.contains(event.target as Node)) return;
+      setActionsMenuOpen(false);
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setActionsMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('keydown', handleEscape);
+
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [actionsMenuOpen]);
 
   const handleNewArticle = () => {
     const newId = Date.now().toString();
@@ -1197,9 +1226,50 @@ export default function App() {
             <h1>{t.ui.heroTitle}</h1>
             <p className="subline">{t.ui.heroSubtitle}</p>
           </div>
+          <div className="hero-actions">
+            <div className="btn-group lang-switcher" aria-label={t.ui.language}>
+              <button
+                className={`btn ghost small ${lang === 'en' ? 'active' : ''}`}
+                onClick={() => changeLanguage('en')}
+              >
+                EN
+              </button>
+              <span className="sep" aria-hidden="true">|</span>
+              <button
+                className={`btn ghost small ${lang === 'zh' ? 'active' : ''}`}
+                onClick={() => changeLanguage('zh')}
+              >
+                中
+              </button>
+            </div>
+          </div>
         </header>
 
         <main className="editor-wrap">
+          <div className="editor-head">
+            <div className="editor-mode">
+              <span className="editor-head-label">{t.ui.editorMode}</span>
+              <div className="btn-group mode-switcher">
+                <button
+                  data-testid="markdown-view-button"
+                  className={`btn ghost ${viewMode === 'markdown' ? 'active' : ''}`}
+                  onClick={() => setViewMode('markdown')}
+                >
+                  {t.ui.markdownView}
+                </button>
+                <button
+                  data-testid="rich-text-view-button"
+                  className={`btn ghost ${viewMode === 'wysiwyg' ? 'active' : ''}`}
+                  onClick={() => setViewMode('wysiwyg')}
+                >
+                  {t.ui.richTextView}
+                </button>
+              </div>
+            </div>
+            <button className="btn ghost small" onClick={() => setFocusMode((v) => !v)} data-testid="focus-button">
+              {focusMode ? t.ui.exitFocus : t.ui.focusMode}
+            </button>
+          </div>
           {viewMode === 'markdown' ? (
             <textarea
               ref={textareaRef}
@@ -1230,116 +1300,63 @@ export default function App() {
         </main>
 
         <div className="toolbar">
-          <div className="btn-group">
-            <button
-              data-testid="record-button"
-              className={`btn primary small ${recordingState !== 'idle' ? 'active' : ''}`}
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={recordingState === 'recording' ? handleStopRecording : handleStartRecording}
-            >
-              <span className="btn-label">{renderRecordLabel()}</span>
-            </button>
-            {recordingState === 'recording' && (
-              <button className="btn ghost" onMouseDown={(e) => e.preventDefault()} onClick={handleStopRecording}>
-                {t.ui.stop}
+          <div className="toolbar-main">
+            <div className="btn-group">
+              <button
+                data-testid="record-button"
+                className={`btn primary small ${recordingState !== 'idle' ? 'active' : ''}`}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={recordingState === 'recording' ? handleStopRecording : handleStartRecording}
+              >
+                <span className="btn-label">{renderRecordLabel()}</span>
               </button>
-            )}
-            {recordingState === 'transcribing' && (
-              <button className="btn ghost" onMouseDown={(e) => e.preventDefault()} onClick={handleStopRecording}>
-                {t.ui.cancelTranscribing}
+              {recordingState === 'recording' && (
+                <button className="btn ghost" onMouseDown={(e) => e.preventDefault()} onClick={handleStopRecording}>
+                  {t.ui.stop}
+                </button>
+              )}
+              {recordingState === 'transcribing' && (
+                <button className="btn ghost" onMouseDown={(e) => e.preventDefault()} onClick={handleStopRecording}>
+                  {t.ui.cancelTranscribing}
+                </button>
+              )}
+            </div>
+
+            <div className="btn-group">
+              <button
+                data-testid="fix-button"
+                className="btn"
+                onMouseDown={handleActionMouseDown}
+                onClick={() => runTextAction('fix')}
+                title={`Shortcut: ${shortcutHints.fix}`}
+                aria-keyshortcuts={isMac ? 'Meta+Shift+F' : 'Control+Shift+F'}
+              >
+                <span className="btn-label">
+                  {activeAction === 'fix' && actionState === 'processing' ? t.ui.fixProcessing : 'Fix'}
+                </span>
+                <span className="btn-shortcut" aria-hidden="true">
+                  {shortcutHints.fix}
+                </span>
               </button>
-            )}
+              <button
+                data-testid="polish-button"
+                className="btn"
+                onMouseDown={handleActionMouseDown}
+                onClick={() => runTextAction('polish')}
+                title={`Shortcut: ${shortcutHints.polish}`}
+                aria-keyshortcuts={isMac ? 'Meta+Shift+P' : 'Control+Shift+P'}
+              >
+                <span className="btn-label">
+                  {activeAction === 'polish' && actionState === 'processing' ? t.ui.polishProcessing : 'Polish'}
+                </span>
+                <span className="btn-shortcut" aria-hidden="true">
+                  {shortcutHints.polish}
+                </span>
+              </button>
+            </div>
           </div>
 
-          <div className="btn-group">
-            <button
-              data-testid="fix-button"
-              className="btn"
-              onMouseDown={handleActionMouseDown}
-              onClick={() => runTextAction('fix')}
-              title={`Shortcut: ${shortcutHints.fix}`}
-              aria-keyshortcuts={isMac ? 'Meta+Shift+F' : 'Control+Shift+F'}
-            >
-              <span className="btn-label">
-                {activeAction === 'fix' && actionState === 'processing' ? t.ui.fixProcessing : 'Fix'}
-              </span>
-              <span className="btn-shortcut" aria-hidden="true">
-                {shortcutHints.fix}
-              </span>
-            </button>
-            <button
-              data-testid="polish-button"
-              className="btn"
-              onMouseDown={handleActionMouseDown}
-              onClick={() => runTextAction('polish')}
-              title={`Shortcut: ${shortcutHints.polish}`}
-              aria-keyshortcuts={isMac ? 'Meta+Shift+P' : 'Control+Shift+P'}
-            >
-              <span className="btn-label">
-                {activeAction === 'polish' && actionState === 'processing' ? t.ui.polishProcessing : 'Polish'}
-              </span>
-              <span className="btn-shortcut" aria-hidden="true">
-                {shortcutHints.polish}
-              </span>
-            </button>
-          </div>
-
-          <div className="btn-group">
-            <button
-              data-testid="markdown-view-button"
-              className={`btn ghost ${viewMode === 'markdown' ? 'active' : ''}`}
-              onClick={() => setViewMode('markdown')}
-            >
-              Markdown
-            </button>
-            <button
-              data-testid="rich-text-view-button"
-              className={`btn ghost ${viewMode === 'wysiwyg' ? 'active' : ''}`}
-              onClick={() => setViewMode('wysiwyg')}
-            >
-              Rich Text
-            </button>
-          </div>
-
-          <div className="btn-group">
-            <button
-              data-testid="download-markdown-button"
-              className={`btn ghost small ${canCopy ? '' : 'disabled'}`}
-              onClick={handleDownloadMarkdown}
-              disabled={!canCopy}
-              title={t.ui.downloadMD}
-            >
-              {t.ui.downloadMD}
-            </button>
-            <button
-              data-testid="copy-markdown-button"
-              className={`btn ghost small ${canCopy ? '' : 'disabled'}`}
-              onClick={handleCopyMarkdown}
-              disabled={!canCopy}
-              title={t.ui.copyMD}
-            >
-              {t.ui.copyMD}
-            </button>
-            <button
-              data-testid="copy-rich-text-button"
-              className={`btn ghost small ${canCopy ? '' : 'disabled'}`}
-              onClick={handleCopyRichText}
-              disabled={!canCopy}
-              title={t.ui.copyRT}
-            >
-              {t.ui.copyRT}
-            </button>
-          </div>
-
-          <div className="btn-group">
-            <button
-              data-testid="duplicate-article-button"
-              className="btn ghost"
-              onClick={handleDuplicateArticle}
-              title={t.ui.duplicate}
-            >
-              {t.ui.duplicate}
-            </button>
+          <div className="toolbar-secondary">
             <button
               data-testid="undo-button"
               className={`btn ${undoSnapshot ? '' : 'disabled'}`}
@@ -1348,25 +1365,74 @@ export default function App() {
             >
               {t.ui.undo}
             </button>
-            <button className="btn ghost" onClick={() => setFocusMode((v) => !v)} data-testid="focus-button">
-              {focusMode ? t.ui.exitFocus : t.ui.focusMode}
-            </button>
-          </div>
-
-          <div className="btn-group lang-switcher" aria-label={t.ui.language}>
-            <button
-              className={`btn ghost small ${lang === 'en' ? 'active' : ''}`}
-              onClick={() => changeLanguage('en')}
-            >
-              EN
-            </button>
-            <span className="sep" aria-hidden="true">|</span>
-            <button
-              className={`btn ghost small ${lang === 'zh' ? 'active' : ''}`}
-              onClick={() => changeLanguage('zh')}
-            >
-              中
-            </button>
+            <div className={`toolbar-menu ${actionsMenuOpen ? 'open' : ''}`} ref={actionsMenuRef}>
+              <button
+                className={`btn ghost ${actionsMenuOpen ? 'active' : ''}`}
+                onClick={() => setActionsMenuOpen((open) => !open)}
+                data-testid="actions-menu-button"
+                aria-expanded={actionsMenuOpen}
+                aria-haspopup="menu"
+              >
+                {t.ui.actionsMenu}
+              </button>
+              {actionsMenuOpen && (
+                <div className="toolbar-popover" role="menu">
+                  <div className="menu-section">
+                    <span className="menu-label">{t.ui.shareGroup}</span>
+                    <button
+                      data-testid="download-markdown-button"
+                      className={`btn ghost small menu-button ${canCopy ? '' : 'disabled'}`}
+                      onClick={() => {
+                        setActionsMenuOpen(false);
+                        handleDownloadMarkdown();
+                      }}
+                      disabled={!canCopy}
+                      title={t.ui.downloadMD}
+                    >
+                      {t.ui.downloadMD}
+                    </button>
+                    <button
+                      data-testid="copy-markdown-button"
+                      className={`btn ghost small menu-button ${canCopy ? '' : 'disabled'}`}
+                      onClick={() => {
+                        setActionsMenuOpen(false);
+                        void handleCopyMarkdown();
+                      }}
+                      disabled={!canCopy}
+                      title={t.ui.copyMD}
+                    >
+                      {t.ui.copyMD}
+                    </button>
+                    <button
+                      data-testid="copy-rich-text-button"
+                      className={`btn ghost small menu-button ${canCopy ? '' : 'disabled'}`}
+                      onClick={() => {
+                        setActionsMenuOpen(false);
+                        void handleCopyRichText();
+                      }}
+                      disabled={!canCopy}
+                      title={t.ui.copyRT}
+                    >
+                      {t.ui.copyRT}
+                    </button>
+                  </div>
+                  <div className="menu-section">
+                    <span className="menu-label">{t.ui.documentGroup}</span>
+                    <button
+                      data-testid="duplicate-article-button"
+                      className="btn ghost small menu-button"
+                      onClick={() => {
+                        setActionsMenuOpen(false);
+                        handleDuplicateArticle();
+                      }}
+                      title={t.ui.duplicate}
+                    >
+                      {t.ui.duplicate}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="status">

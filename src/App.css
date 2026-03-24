@@ -265,6 +265,14 @@
   align-items: flex-end;
   padding: 12px 4px;
   flex-shrink: 0;
+  gap: 16px;
+}
+
+.hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
 }
 
 .hero-text h1 {
@@ -296,6 +304,40 @@
   padding: 12px;
   display: flex;
   flex-direction: column;
+  gap: 12px;
+}
+
+.editor-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.editor-mode {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.editor-head-label {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.mode-switcher {
+  padding: 4px;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+}
+
+.mode-switcher .btn {
+  border-radius: 999px;
 }
 
 .editor {
@@ -336,6 +378,51 @@
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
   z-index: 500;
   flex-shrink: 0;
+}
+
+.toolbar-main,
+.toolbar-secondary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.toolbar-menu {
+  position: relative;
+}
+
+.toolbar-popover {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 12px);
+  width: min(320px, calc(100vw - 32px));
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: rgba(11, 15, 22, 0.98);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+}
+
+.menu-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.menu-label {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.menu-button {
+  width: 100%;
+  justify-content: flex-start;
 }
 
 .btn-group {
@@ -596,6 +683,10 @@
   box-shadow: none;
 }
 
+.focus .editor-head {
+  padding-bottom: 4px;
+}
+
 .focus .preview-pane {
   padding-bottom: calc(24px + var(--toolbar-height));
 }
@@ -668,6 +759,25 @@
     padding-bottom: calc(var(--toolbar-height) + 20px);
   }
 
+  .hero {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .hero-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .editor-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .editor-mode {
+    justify-content: space-between;
+  }
+
   .editor {
     min-height: 50vh;
   }
@@ -681,6 +791,18 @@
     right: 16px;
     width: auto;
     transform: none;
+  }
+
+  .toolbar-main {
+    flex-wrap: wrap;
+  }
+
+  .toolbar-secondary {
+    margin-left: auto;
+  }
+
+  .toolbar-popover {
+    width: min(320px, calc(100vw - 48px));
   }
 
   .btn-shortcut {

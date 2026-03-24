@@ -17,7 +17,7 @@ test.describe('Article Management', () => {
 
   test('Sidebar: Create new article', async ({ page }) => {
     // Open sidebar first
-    await page.getByTitle('展开').click();
+    await page.locator('.sidebar-header .btn.ghost.icon-only').click();
     
     const editor = page.getByTestId('editor');
     await editor.fill('First article');
@@ -27,7 +27,7 @@ test.describe('Article Management', () => {
     await expect(firstArticle).toContainText('First article');
 
     // Create new
-    await page.getByText('+ 新建').click();
+    await page.locator('.sidebar-header .btn.primary.small').click();
     await expect(editor).toHaveValue('');
     
     // Check we have 2 articles
@@ -36,7 +36,7 @@ test.describe('Article Management', () => {
 
   test('Sidebar: Switch between articles', async ({ page }) => {
     // Open sidebar first
-    await page.getByTitle('展开').click();
+    await page.locator('.sidebar-header .btn.ghost.icon-only').click();
     
     const editor = page.getByTestId('editor');
     
@@ -44,7 +44,7 @@ test.describe('Article Management', () => {
     await editor.fill('Article A');
     
     // Create second
-    await page.getByText('+ 新建').click();
+    await page.locator('.sidebar-header .btn.primary.small').click();
     await editor.fill('Article B');
     
     // Switch back to first (it's the second in list because new ones are added to top usually, or we need to check logic)
@@ -167,6 +167,7 @@ test.describe('Article Management', () => {
     const editor = page.getByTestId('editor');
     await editor.fill('Original title\nSecond line');
 
+    await page.getByTestId('actions-menu-button').click();
     await page.getByTestId('duplicate-article-button').click();
     await expect(editor).toHaveValue('Original title\nSecond line');
     await expect(page.getByTestId('toast')).toContainText('Article duplicated');

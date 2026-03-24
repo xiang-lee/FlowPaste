@@ -11,7 +11,9 @@ test.beforeEach(async ({ page }) => {
       public onstop: (() => void) | null = null;
       public onerror: (() => void) | null = null;
       public state: 'inactive' | 'recording' = 'inactive';
-      constructor(_stream: MediaStream) {}
+      constructor(stream: MediaStream) {
+        void stream;
+      }
       start() {
         this.state = 'recording';
         setTimeout(() => {
@@ -67,7 +69,7 @@ test('转写插入在光标处', async ({ page }) => {
   await editor.fill('Hello');
   await editor.evaluate((el) => {
     el.focus();
-    // @ts-ignore
+    // @ts-expect-error test directly uses selection API on textarea
     el.setSelectionRange(3, 3);
   });
 
@@ -90,7 +92,7 @@ test('Fix 主路径 + 撤销', async ({ page }) => {
   await editor.fill('Ths is bad.');
   await editor.evaluate((el) => {
     el.focus();
-    // @ts-ignore
+    // @ts-expect-error test directly uses selection API on textarea
     el.setSelectionRange(0, 3);
   });
   await page.getByTestId('fix-button').click();
@@ -180,7 +182,7 @@ test('长文本策略：无选区会提示确认', async ({ page }) => {
   await editor.fill(longText);
 
   page.on('dialog', async (dialog) => {
-    expect(dialog.message()).toContain('建议选中段落');
+    expect(dialog.message()).toMatch(/建议选中段落|selecting a segment/i);
     await dialog.accept();
   });
 
@@ -234,6 +236,7 @@ test('Markdown can be downloaded as a file', async ({ page }) => {
   await editor.fill('Download me\n\nBody line');
 
   const event = page.waitForEvent('download');
+  await page.getByTestId('actions-menu-button').click();
   await page.getByTestId('download-markdown-button').click();
   const download = await event;
 
@@ -248,6 +251,7 @@ test('Download shows success feedback with filename', async ({ page }) => {
   await editor.fill('Download me\n\nBody line');
 
   const event = page.waitForEvent('download');
+  await page.getByTestId('actions-menu-button').click();
   await page.getByTestId('download-markdown-button').click();
   await event;
 

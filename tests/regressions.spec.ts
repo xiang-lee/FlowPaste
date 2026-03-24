@@ -33,7 +33,7 @@ test('Regression: Streaming updates should not swallow surrounding text', async 
   // Start: 7, End: 13
   await editor.evaluate((el) => {
     el.focus();
-    // @ts-ignore
+    // @ts-expect-error test directly uses selection API on textarea
     el.setSelectionRange(7, 13);
   });
 
@@ -102,7 +102,7 @@ test('Regression: Missing Token should not crash/block but allow Proxy to handle
     
     // Setup state so button works
     await editor.evaluate((el) => {
-        // @ts-ignore
+        // @ts-expect-error test directly uses selection API on textarea
         el.setSelectionRange(0, 7);
     });
 
