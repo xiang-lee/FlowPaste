@@ -82,6 +82,53 @@ const sortArticlesByRecent = (articles: Article[]) =>
     return b.id.localeCompare(a.id);
   });
 
+const normalizeQuery = (value: string) => value.trim().toLocaleLowerCase();
+
+function getHighlightedParts(value: string, query: string) {
+  const normalizedQuery = normalizeQuery(query);
+  if (!normalizedQuery) return [{ text: value, match: false }];
+
+  const normalizedValue = value.toLocaleLowerCase();
+  const parts: Array<{ text: string; match: boolean }> = [];
+  let cursor = 0;
+
+  while (cursor < value.length) {
+    const matchIndex = normalizedValue.indexOf(normalizedQuery, cursor);
+    if (matchIndex === -1) break;
+    if (matchIndex > cursor) {
+      parts.push({ text: value.slice(cursor, matchIndex), match: false });
+    }
+    const nextCursor = matchIndex + normalizedQuery.length;
+    parts.push({ text: value.slice(matchIndex, nextCursor), match: true });
+    cursor = nextCursor;
+  }
+
+  if (cursor < value.length) {
+    parts.push({ text: value.slice(cursor), match: false });
+  }
+
+  return parts.length > 0 ? parts : [{ text: value, match: false }];
+}
+
+function getArticleSearchSnippet(content: string, query: string) {
+  const normalizedQuery = normalizeQuery(query);
+  if (!normalizedQuery) return '';
+
+  const flattened = content.replace(/\s+/g, ' ').trim();
+  if (!flattened) return '';
+
+  const normalizedContent = flattened.toLocaleLowerCase();
+  const matchIndex = normalizedContent.indexOf(normalizedQuery);
+  if (matchIndex === -1) return '';
+
+  const start = Math.max(0, matchIndex - 24);
+  const end = Math.min(flattened.length, matchIndex + normalizedQuery.length + 32);
+  let snippet = flattened.slice(start, end).trim();
+  if (start > 0) snippet = `...${snippet}`;
+  if (end < flattened.length) snippet = `${snippet}...`;
+  return snippet;
+}
+
 const LONG_TEXT_THRESHOLD = 8000;
 const BASE_URL = '/api';
 const TOKEN = import.meta.env.VITE_AI_BUILDER_TOKEN;
@@ -158,7 +205,7 @@ export default function App() {
   const isResizingRef = useRef(false);
   const sortedArticles = useMemo(() => sortArticlesByRecent(articles), [articles]);
   const filteredArticles = useMemo(() => {
-    const query = articleQuery.trim().toLocaleLowerCase();
+    const query = normalizeQuery(articleQuery);
     if (!query) return sortedArticles;
     return sortedArticles.filter((article) => {
       const title = article.title.toLocaleLowerCase();
@@ -1190,7 +1237,30 @@ export default function App() {
                    className={`article-item ${article.id === currentArticleId ? 'active' : ''}`}
                    onClick={() => handleSelectArticle(article.id)}
                 >
-                 <div className="article-title">{article.title || t.ui.untitled}</div>
+                 <div className="article-title">
+                   {getHighlightedParts(article.title || t.ui.untitled, articleQuery).map((part, index) =>
+                     part.match ? (
+                       <mark key={`${article.id}-title-${index}`} className="match-mark">
+                         {part.text}
+                       </mark>
+                     ) : (
+                       <span key={`${article.id}-title-${index}`}>{part.text}</span>
+                     ),
+                   )}
+                 </div>
+                 {articleQuery && getArticleSearchSnippet(article.content, articleQuery) && (
+                   <div className="article-snippet" data-testid="article-search-snippet">
+                     {getHighlightedParts(getArticleSearchSnippet(article.content, articleQuery), articleQuery).map((part, index) =>
+                       part.match ? (
+                         <mark key={`${article.id}-snippet-${index}`} className="match-mark">
+                           {part.text}
+                         </mark>
+                       ) : (
+                         <span key={`${article.id}-snippet-${index}`}>{part.text}</span>
+                       ),
+                     )}
+                   </div>
+                 )}
                  <div className="article-date">
                     {new Date(article.updatedAt).toLocaleString(undefined, {
                       month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit'

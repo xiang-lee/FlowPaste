@@ -222,4 +222,22 @@ test.describe('Article Management', () => {
     await expect(search).toHaveValue('');
     await expect(page.locator('.article-item')).toHaveCount(2);
   });
+
+  test('Sidebar: Search shows matching content preview', async ({ page }) => {
+    await page.locator('.sidebar-header .btn.ghost.icon-only').click();
+
+    const editor = page.getByTestId('editor');
+    await editor.fill('Alpha title\nSecond line');
+
+    await page.locator('.sidebar-header .btn.primary.small').click();
+    await editor.fill('Project note\nContains zebra keyword in the body');
+
+    await page.getByTestId('article-search-input').fill('zebra');
+
+    const articles = page.locator('.article-item');
+    await expect(articles).toHaveCount(1);
+    await expect(articles.first()).toContainText('Project note');
+    await expect(page.getByTestId('article-search-snippet')).toContainText('zebra');
+    await expect(page.locator('.article-item .match-mark')).toContainText('zebra');
+  });
 });
