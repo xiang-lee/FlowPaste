@@ -279,10 +279,12 @@ export default function App() {
     [],
   );
   const shortcutHints = useMemo(() => {
-    const format = (key: string) => (isMac ? `Cmd+Shift+${key}` : `Ctrl+Shift+${key}`);
+    const formatAction = (key: string) => (isMac ? `Cmd+Shift+${key}` : `Ctrl+Shift+${key}`);
+    const formatPrimary = (key: string) => (isMac ? `Cmd+${key}` : `Ctrl+${key}`);
     return {
-      fix: format('F'),
-      polish: format('P'),
+      fix: formatAction('F'),
+      polish: formatAction('P'),
+      search: formatPrimary('K'),
     };
   }, [isMac]);
   const wysiwygRef = useRef<HTMLDivElement | null>(null);
@@ -302,6 +304,7 @@ export default function App() {
 
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const pendingSearchFocusRef = useRef(false);
   const actionsMenuRef = useRef<HTMLDivElement | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -420,6 +423,14 @@ export default function App() {
     };
   }, [actionsMenuOpen]);
 
+  useEffect(() => {
+    if (sidebarCollapsed || !pendingSearchFocusRef.current) return;
+    if (!searchInputRef.current) return;
+    searchInputRef.current.focus();
+    searchInputRef.current.select();
+    pendingSearchFocusRef.current = false;
+  }, [sidebarCollapsed]);
+
   const handleNewArticle = () => {
     const newId = Date.now().toString();
     const newArticle: Article = { id: newId, title: t.ui.untitled, content: '', updatedAt: Date.now() };
@@ -458,6 +469,17 @@ export default function App() {
   const clearArticleSearch = () => {
     setArticleQuery('');
     searchInputRef.current?.focus();
+  };
+
+  const focusArticleSearch = () => {
+    pendingSearchFocusRef.current = true;
+    if (sidebarCollapsed) {
+      setSidebarCollapsed(false);
+      return;
+    }
+    searchInputRef.current?.focus();
+    searchInputRef.current?.select();
+    pendingSearchFocusRef.current = false;
   };
 
   const handleSelectArticle = (id: string) => {
@@ -1163,6 +1185,11 @@ export default function App() {
         downloadMarkdownRef.current();
         return;
       }
+      if (matchesPrimaryShortcut(event, 'k')) {
+        event.preventDefault();
+        focusArticleSearch();
+        return;
+      }
       if (matchesShortcut(event, 'f')) {
         event.preventDefault();
         runTextActionRef.current('fix');
@@ -1175,7 +1202,7 @@ export default function App() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [focusMode, isMac]);
+  }, [focusMode, isMac, sidebarCollapsed]);
 
   return (
     <div className={`app-shell ${focusMode ? 'focus' : ''}`}>
@@ -1215,6 +1242,7 @@ export default function App() {
                     }
                   }}
                   placeholder={t.ui.articleSearchPlaceholder}
+                  title={`${t.ui.articleSearchPlaceholder} (${shortcutHints.search})`}
                 />
                 {articleQuery && (
                   <button

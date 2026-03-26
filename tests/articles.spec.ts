@@ -240,4 +240,26 @@ test.describe('Article Management', () => {
     await expect(page.getByTestId('article-search-snippet')).toContainText('zebra');
     await expect(page.locator('.article-item .match-mark')).toContainText('zebra');
   });
+
+  test('Sidebar: Ctrl+K opens and focuses article search', async ({ page }) => {
+    await page.locator('.sidebar-header .btn.ghost.icon-only').click();
+
+    const editor = page.getByTestId('editor');
+    await editor.fill('Alpha note');
+
+    await page.locator('.sidebar-header .btn.primary.small').click();
+    await editor.fill('Beta note');
+
+    await page.locator('.sidebar-header .btn.ghost.icon-only').click();
+
+    await page.keyboard.press('Control+K');
+
+    const search = page.getByTestId('article-search-input');
+    await expect(search).toBeVisible();
+    await expect(search).toBeFocused();
+
+    await search.fill('Alpha');
+    await expect(page.locator('.article-item')).toHaveCount(1);
+    await expect(page.locator('.article-item').first()).toContainText('Alpha note');
+  });
 });
