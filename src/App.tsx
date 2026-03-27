@@ -1239,6 +1239,11 @@ export default function App() {
                     if (e.key === 'Escape' && articleQuery) {
                       e.preventDefault();
                       clearArticleSearch();
+                      return;
+                    }
+                    if (e.key === 'Enter' && filteredArticles.length > 0) {
+                      e.preventDefault();
+                      handleSelectArticle(filteredArticles[0].id);
                     }
                   }}
                   placeholder={t.ui.articleSearchPlaceholder}

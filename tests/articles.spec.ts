@@ -262,4 +262,20 @@ test.describe('Article Management', () => {
     await expect(page.locator('.article-item')).toHaveCount(1);
     await expect(page.locator('.article-item').first()).toContainText('Alpha note');
   });
+
+  test('Sidebar: Enter opens the first filtered article', async ({ page }) => {
+    await page.locator('.sidebar-header .btn.ghost.icon-only').click();
+
+    const editor = page.getByTestId('editor');
+    await editor.fill('Alpha note');
+
+    await page.locator('.sidebar-header .btn.primary.small').click();
+    await editor.fill('Beta note');
+
+    const search = page.getByTestId('article-search-input');
+    await search.fill('Alpha');
+    await search.press('Enter');
+
+    await expect(editor).toHaveValue('Alpha note');
+  });
 });
