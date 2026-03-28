@@ -175,6 +175,15 @@
   border-color: rgba(123, 224, 184, 0.2);
 }
 
+.article-item.search-active {
+  background: rgba(104, 162, 255, 0.1);
+  border-color: rgba(104, 162, 255, 0.28);
+}
+
+.article-item.active.search-active {
+  box-shadow: inset 0 0 0 1px rgba(255, 213, 128, 0.24);
+}
+
 .article-title {
   font-weight: 500;
   font-size: 14px;

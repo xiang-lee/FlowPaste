@@ -278,4 +278,25 @@ test.describe('Article Management', () => {
 
     await expect(editor).toHaveValue('Alpha note');
   });
+
+  test('Sidebar: Arrow keys change which search result Enter opens', async ({ page }) => {
+    await page.locator('.sidebar-header .btn.ghost.icon-only').click();
+
+    const editor = page.getByTestId('editor');
+    await editor.fill('Alpha first');
+
+    await page.locator('.sidebar-header .btn.primary.small').click();
+    await editor.fill('Alpha second');
+
+    const search = page.getByTestId('article-search-input');
+    await search.fill('Alpha');
+
+    await expect(page.locator('.article-item')).toHaveCount(2);
+    await expect(page.locator('.article-item').first()).toContainText('Alpha second');
+
+    await search.press('ArrowDown');
+    await search.press('Enter');
+
+    await expect(editor).toHaveValue('Alpha first');
+  });
 });

@@ -202,6 +202,7 @@ export default function App() {
     return Math.max(150, Math.min(saved, 600));
   });
   const [articleQuery, setArticleQuery] = useState('');
+  const [articleSearchIndex, setArticleSearchIndex] = useState(0);
   const isResizingRef = useRef(false);
   const sortedArticles = useMemo(() => sortArticlesByRecent(articles), [articles]);
   const filteredArticles = useMemo(() => {
@@ -401,6 +402,26 @@ export default function App() {
   }, [viewMode]);
 
   useEffect(() => {
+    setArticleSearchIndex(0);
+  }, [articleQuery]);
+
+  useEffect(() => {
+    if (!normalizeQuery(articleQuery)) return;
+    if (filteredArticles.length === 0) {
+      setArticleSearchIndex(0);
+      return;
+    }
+    setArticleSearchIndex((prev) => Math.min(prev, filteredArticles.length - 1));
+  }, [articleQuery, filteredArticles.length]);
+
+  useEffect(() => {
+    if (!normalizeQuery(articleQuery)) return;
+    const activeResult = document.querySelector('[data-search-active="true"]');
+    if (!(activeResult instanceof HTMLElement)) return;
+    activeResult.scrollIntoView({ block: 'nearest' });
+  }, [articleQuery, articleSearchIndex]);
+
+  useEffect(() => {
     if (!actionsMenuOpen) return;
 
     const handlePointerDown = (event: MouseEvent) => {
@@ -468,6 +489,7 @@ export default function App() {
 
   const clearArticleSearch = () => {
     setArticleQuery('');
+    setArticleSearchIndex(0);
     searchInputRef.current?.focus();
   };
 
@@ -1241,9 +1263,19 @@ export default function App() {
                       clearArticleSearch();
                       return;
                     }
+                    if (e.key === 'ArrowDown' && filteredArticles.length > 0) {
+                      e.preventDefault();
+                      setArticleSearchIndex((prev) => (prev + 1) % filteredArticles.length);
+                      return;
+                    }
+                    if (e.key === 'ArrowUp' && filteredArticles.length > 0) {
+                      e.preventDefault();
+                      setArticleSearchIndex((prev) => (prev - 1 + filteredArticles.length) % filteredArticles.length);
+                      return;
+                    }
                     if (e.key === 'Enter' && filteredArticles.length > 0) {
                       e.preventDefault();
-                      handleSelectArticle(filteredArticles[0].id);
+                      handleSelectArticle(filteredArticles[articleSearchIndex]?.id ?? filteredArticles[0].id);
                     }
                   }}
                   placeholder={t.ui.articleSearchPlaceholder}
@@ -1263,13 +1295,14 @@ export default function App() {
                 )}
               </div>
             </div>
-            <div className="article-list"> 
-             {filteredArticles.map(article => (
-                <div 
-                   key={article.id} 
-                   className={`article-item ${article.id === currentArticleId ? 'active' : ''}`}
-                   onClick={() => handleSelectArticle(article.id)}
-                >
+              <div className="article-list"> 
+             {filteredArticles.map((article, index) => (
+                 <div 
+                    key={article.id} 
+                    className={`article-item ${article.id === currentArticleId ? 'active' : ''} ${normalizeQuery(articleQuery) && index === articleSearchIndex ? 'search-active' : ''}`}
+                    data-search-active={normalizeQuery(articleQuery) && index === articleSearchIndex ? 'true' : undefined}
+                    onClick={() => handleSelectArticle(article.id)}
+                 >
                  <div className="article-title">
                    {getHighlightedParts(article.title || t.ui.untitled, articleQuery).map((part, index) =>
                      part.match ? (
