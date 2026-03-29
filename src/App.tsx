@@ -262,6 +262,12 @@ export default function App() {
     }
     return initialText;
   });
+  const currentArticleLabel = useMemo(() => {
+    const draftTitle = text.trim().split('\n')[0] || '';
+    const fallbackTitle = articles.find((article) => article.id === currentArticleId)?.title || t.ui.untitled;
+    const base = draftTitle || fallbackTitle || t.ui.untitled;
+    return base.length > 48 ? `${base.slice(0, 48)}...` : base;
+  }, [articles, currentArticleId, text, t.ui.untitled]);
 
   const [selection, setSelection] = useState({ start: 0, end: 0 });
   const [undoSnapshot, setUndoSnapshot] = useState<string | null>(null);
@@ -502,6 +508,17 @@ export default function App() {
     searchInputRef.current?.focus();
     searchInputRef.current?.select();
     pendingSearchFocusRef.current = false;
+  };
+
+  const revealCurrentArticle = () => {
+    if (focusMode) setFocusMode(false);
+    setSidebarCollapsed(false);
+    window.setTimeout(() => {
+      const activeArticle = document.querySelector('.article-item.active');
+      if (activeArticle instanceof HTMLElement) {
+        activeArticle.scrollIntoView({ block: 'nearest' });
+      }
+    }, 0);
   };
 
   const handleSelectArticle = (id: string) => {
@@ -1401,6 +1418,16 @@ export default function App() {
                   {t.ui.richTextView}
                 </button>
               </div>
+              <button
+                type="button"
+                className="current-article-button"
+                data-testid="current-article-button"
+                onClick={revealCurrentArticle}
+                title={`${t.ui.currentArticle}: ${currentArticleLabel}`}
+                aria-label={`${t.ui.currentArticle}: ${currentArticleLabel}`}
+              >
+                {currentArticleLabel}
+              </button>
             </div>
             <button className="btn ghost small" onClick={() => setFocusMode((v) => !v)} data-testid="focus-button">
               {focusMode ? t.ui.exitFocus : t.ui.focusMode}

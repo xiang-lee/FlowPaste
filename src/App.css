@@ -336,12 +336,15 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
 .editor-mode {
   display: flex;
   align-items: center;
   gap: 12px;
+  min-width: 0;
+  flex-wrap: wrap;
 }
 
 .editor-head-label {
@@ -362,6 +365,26 @@
 
 .mode-switcher .btn {
   border-radius: 999px;
+}
+
+.current-article-button {
+  max-width: min(360px, 60vw);
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(104, 162, 255, 0.28);
+  background: rgba(104, 162, 255, 0.1);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.current-article-button:hover {
+  border-color: rgba(123, 224, 184, 0.45);
+  background: rgba(123, 224, 184, 0.12);
 }
 
 .editor {

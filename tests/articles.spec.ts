@@ -299,4 +299,21 @@ test.describe('Article Management', () => {
 
     await expect(editor).toHaveValue('Alpha first');
   });
+
+  test('Editor header shows current article and can reveal sidebar', async ({ page }) => {
+    const editor = page.getByTestId('editor');
+    await editor.fill('Alpha title\nBody line');
+
+    const currentArticleButton = page.getByTestId('current-article-button');
+    await expect(currentArticleButton).toContainText('Alpha title');
+
+    const focusButton = page.getByTestId('focus-button');
+    await focusButton.click();
+    await expect(focusButton).toHaveText(/Exit Focus|退出专注/);
+
+    await currentArticleButton.click();
+
+    await expect(page.locator('.sidebar')).not.toHaveClass(/collapsed/);
+    await expect(focusButton).toHaveText(/Focus Mode|专注模式/);
+  });
 });

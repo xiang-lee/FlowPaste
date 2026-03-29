@@ -33,6 +33,7 @@ ${text}`
     minArticleWarning: "至少保留一篇文章",
     heroTitle: "语音转写，一键润色，创作永不中断",
     heroSubtitle: "录音、转写、修正、润色全流程一屏搞定。无需频繁复制粘贴，多文档轻松切换，数据本地存储，安全更私密。",
+    currentArticle: "当前文章",
     editorPlaceholder: "开始口述或粘贴你的 Markdown 草稿；录音结束会自动插入转写。选中段落后点击 Fix/Polish 直接替换。",
     editorMode: "视图",
     markdownView: "Markdown",
