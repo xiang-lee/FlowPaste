@@ -34,6 +34,8 @@ ${text}`
     heroTitle: "Voice to Text, Instant Polish, Uninterrupted Flow",
     heroSubtitle: "Record, transcribe, fix, and polish in one screen. No copy-pasting, easy switching, local storage, private and secure.",
     currentArticle: "Current article",
+    newerArticle: "Newer article",
+    olderArticle: "Older article",
     editorPlaceholder: "Start dictating or paste your Markdown draft; recording will auto-insert transcription. Select text and click Fix/Polish to replace.",
     editorMode: "View",
     markdownView: "Markdown",

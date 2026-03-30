@@ -268,6 +268,15 @@ export default function App() {
     const base = draftTitle || fallbackTitle || t.ui.untitled;
     return base.length > 48 ? `${base.slice(0, 48)}...` : base;
   }, [articles, currentArticleId, text, t.ui.untitled]);
+  const currentArticleListIndex = useMemo(
+    () => sortedArticles.findIndex((article) => article.id === currentArticleId),
+    [currentArticleId, sortedArticles],
+  );
+  const newerArticle = currentArticleListIndex > 0 ? sortedArticles[currentArticleListIndex - 1] : null;
+  const olderArticle =
+    currentArticleListIndex >= 0 && currentArticleListIndex < sortedArticles.length - 1
+      ? sortedArticles[currentArticleListIndex + 1]
+      : null;
 
   const [selection, setSelection] = useState({ start: 0, end: 0 });
   const [undoSnapshot, setUndoSnapshot] = useState<string | null>(null);
@@ -519,6 +528,11 @@ export default function App() {
         activeArticle.scrollIntoView({ block: 'nearest' });
       }
     }, 0);
+  };
+
+  const navigateArticleByList = (targetId: string | undefined) => {
+    if (!targetId || targetId === currentArticleId) return;
+    handleSelectArticle(targetId);
   };
 
   const handleSelectArticle = (id: string) => {
@@ -1420,6 +1434,17 @@ export default function App() {
               </div>
               <button
                 type="button"
+                className="article-nav-button"
+                data-testid="newer-article-button"
+                onClick={() => navigateArticleByList(newerArticle?.id)}
+                disabled={!newerArticle}
+                title={newerArticle ? `${t.ui.newerArticle}: ${newerArticle.title}` : t.ui.newerArticle}
+                aria-label={newerArticle ? `${t.ui.newerArticle}: ${newerArticle.title}` : t.ui.newerArticle}
+              >
+                ←
+              </button>
+              <button
+                type="button"
                 className="current-article-button"
                 data-testid="current-article-button"
                 onClick={revealCurrentArticle}
@@ -1427,6 +1452,17 @@ export default function App() {
                 aria-label={`${t.ui.currentArticle}: ${currentArticleLabel}`}
               >
                 {currentArticleLabel}
+              </button>
+              <button
+                type="button"
+                className="article-nav-button"
+                data-testid="older-article-button"
+                onClick={() => navigateArticleByList(olderArticle?.id)}
+                disabled={!olderArticle}
+                title={olderArticle ? `${t.ui.olderArticle}: ${olderArticle.title}` : t.ui.olderArticle}
+                aria-label={olderArticle ? `${t.ui.olderArticle}: ${olderArticle.title}` : t.ui.olderArticle}
+              >
+                →
               </button>
             </div>
             <button className="btn ghost small" onClick={() => setFocusMode((v) => !v)} data-testid="focus-button">
