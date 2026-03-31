@@ -214,6 +214,7 @@ export default function App() {
       return title.includes(query) || content.includes(query);
     });
   }, [articleQuery, sortedArticles]);
+  const hasArticleQuery = Boolean(normalizeQuery(articleQuery));
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -1325,6 +1326,13 @@ export default function App() {
                   </button>
                 )}
               </div>
+              {hasArticleQuery && (
+                <div className="sidebar-search-meta" data-testid="article-search-status">
+                  {filteredArticles.length > 0
+                    ? t.ui.searchStatus(articleSearchIndex + 1, filteredArticles.length)
+                    : t.ui.searchStatusEmpty}
+                </div>
+              )}
             </div>
               <div className="article-list"> 
              {filteredArticles.map((article, index) => (

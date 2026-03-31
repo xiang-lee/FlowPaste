@@ -145,6 +145,14 @@
   color: var(--text);
 }
 
+.sidebar-search-meta {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: right;
+}
+
 .article-empty {
   padding: 16px 12px;
   color: var(--muted);

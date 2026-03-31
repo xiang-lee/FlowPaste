@@ -194,9 +194,11 @@ test.describe('Article Management', () => {
     const articles = page.locator('.article-item');
     await expect(articles).toHaveCount(1);
     await expect(articles.first()).toContainText('Alpha note');
+    await expect(page.getByTestId('article-search-status')).toHaveText('1 / 1 matches');
 
     await page.getByTestId('article-search-input').fill('Gamma');
     await expect(page.locator('.article-item')).toHaveCount(0);
+    await expect(page.getByTestId('article-search-status')).toHaveText('0 matches');
     await expect(page.getByTestId('article-search-empty')).toContainText('No matching articles');
   });
 
@@ -293,8 +295,10 @@ test.describe('Article Management', () => {
 
     await expect(page.locator('.article-item')).toHaveCount(2);
     await expect(page.locator('.article-item').first()).toContainText('Alpha second');
+    await expect(page.getByTestId('article-search-status')).toHaveText('1 / 2 matches');
 
     await search.press('ArrowDown');
+    await expect(page.getByTestId('article-search-status')).toHaveText('2 / 2 matches');
     await search.press('Enter');
 
     await expect(editor).toHaveValue('Alpha first');

@@ -28,6 +28,8 @@ ${text}`
     articleSearchPlaceholder: "Search articles",
     noArticlesMatch: "No matching articles",
     clearSearch: "Clear search",
+    searchStatus: (current: number, total: number) => `${current} / ${total} matches`,
+    searchStatusEmpty: "0 matches",
     untitled: "Untitled",
     deleteConfirm: "Delete this article?",
     minArticleWarning: "Keep at least one article",
