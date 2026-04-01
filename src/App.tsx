@@ -273,6 +273,8 @@ export default function App() {
     () => sortedArticles.findIndex((article) => article.id === currentArticleId),
     [currentArticleId, sortedArticles],
   );
+  const currentArticlePositionLabel =
+    currentArticleListIndex >= 0 ? t.ui.articlePosition(currentArticleListIndex + 1, sortedArticles.length) : '';
   const newerArticle = currentArticleListIndex > 0 ? sortedArticles[currentArticleListIndex - 1] : null;
   const olderArticle =
     currentArticleListIndex >= 0 && currentArticleListIndex < sortedArticles.length - 1
@@ -1461,6 +1463,11 @@ export default function App() {
               >
                 {currentArticleLabel}
               </button>
+              {currentArticlePositionLabel && (
+                <span className="article-position-chip" data-testid="current-article-position">
+                  {currentArticlePositionLabel}
+                </span>
+              )}
               <button
                 type="button"
                 className="article-nav-button"

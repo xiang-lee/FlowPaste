@@ -324,17 +324,21 @@ test.describe('Article Management', () => {
   test('Editor header can jump to older and newer articles', async ({ page }) => {
     const editor = page.getByTestId('editor');
     await editor.fill('Alpha title\nFirst body');
+    await expect(page.getByTestId('current-article-position')).toHaveText('1 / 1');
 
     await page.locator('.sidebar-header .btn.ghost.icon-only').click();
     await page.locator('.sidebar-header .btn.primary.small').click();
     await editor.fill('Beta title\nSecond body');
+    await expect(page.getByTestId('current-article-position')).toHaveText('1 / 2');
 
     await page.getByTestId('older-article-button').click();
     await expect(editor).toHaveValue('Alpha title\nFirst body');
     await expect(page.getByTestId('current-article-button')).toContainText('Alpha title');
+    await expect(page.getByTestId('current-article-position')).toHaveText('2 / 2');
 
     await page.getByTestId('newer-article-button').click();
     await expect(editor).toHaveValue('Beta title\nSecond body');
     await expect(page.getByTestId('current-article-button')).toContainText('Beta title');
+    await expect(page.getByTestId('current-article-position')).toHaveText('1 / 2');
   });
 });

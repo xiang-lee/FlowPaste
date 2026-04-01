@@ -395,6 +395,18 @@
   background: rgba(123, 224, 184, 0.12);
 }
 
+.article-position-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .article-nav-button {
   width: 34px;
   height: 34px;
