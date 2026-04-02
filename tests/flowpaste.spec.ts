@@ -288,3 +288,25 @@ test('Document stats show current character and line counts', async ({ page }) =
 
   await expect(page.getByTestId('document-stats')).toHaveText('11 chars · 2 lines');
 });
+
+test('Browser tab title reflects current article and recording state', async ({ page }) => {
+  await page.route(transcriptionRoute, async (route) => {
+    await page.waitForTimeout(150);
+    await route.fulfill({ json: { text: 'tab text' } });
+  });
+
+  await page.goto('/');
+  const editor = page.getByTestId('editor');
+  await editor.fill('Alpha title\nBody line');
+
+  await expect(page).toHaveTitle('Alpha title - FlowPaste');
+
+  const recordButton = page.getByTestId('record-button');
+  await recordButton.click();
+  await expect(page).toHaveTitle('Recording - Alpha title - FlowPaste');
+
+  await recordButton.click();
+  await expect(page).toHaveTitle('Transcribing - Alpha title - FlowPaste');
+
+  await expect(page).toHaveTitle('Alpha title - FlowPaste');
+});

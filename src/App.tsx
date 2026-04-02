@@ -288,6 +288,16 @@ export default function App() {
   const [recordingState, setRecordingState] = useState<RecordingState>('idle');
   const [actionState, setActionState] = useState<'idle' | 'processing'>('idle');
   const [activeAction, setActiveAction] = useState<ActionType | null>(null);
+  const currentWindowStatus =
+    recordingState === 'recording'
+      ? t.ui.recordingStatus
+      : recordingState === 'transcribing'
+        ? t.ui.transcribingStatus
+        : actionState === 'processing' && activeAction === 'fix'
+          ? 'Fix'
+          : actionState === 'processing' && activeAction === 'polish'
+            ? 'Polish'
+            : '';
   const [viewMode, setViewMode] = useState<'markdown' | 'wysiwyg'>(() => {
     const saved = localStorage.getItem(VIEW_MODE_KEY);
     return saved === 'wysiwyg' ? 'wysiwyg' : 'markdown';
@@ -418,6 +428,13 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem(VIEW_MODE_KEY, viewMode);
   }, [viewMode]);
+
+  useEffect(() => {
+    const parts = ['FlowPaste'];
+    if (currentArticleLabel) parts.unshift(currentArticleLabel);
+    if (currentWindowStatus) parts.unshift(currentWindowStatus);
+    document.title = parts.join(' - ');
+  }, [currentArticleLabel, currentWindowStatus]);
 
   useEffect(() => {
     setArticleSearchIndex(0);
