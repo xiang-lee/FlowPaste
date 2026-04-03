@@ -159,6 +159,18 @@ function filename(value: string) {
   return safe || 'flowpaste';
 }
 
+function focusContentEditableAtEnd(element: HTMLElement | null) {
+  if (!element) return;
+  element.focus();
+  const selection = window.getSelection();
+  if (!selection) return;
+  const range = document.createRange();
+  range.selectNodeContents(element);
+  range.collapse(false);
+  selection.removeAllRanges();
+  selection.addRange(range);
+}
+
 function useToast() {
   const [toast, setToast] = useState<Toast | null>(null);
   useEffect(() => {
@@ -362,8 +374,16 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (textareaRef.current && !sidebarCollapsed) textareaRef.current.focus();
-  }, [currentArticleId]);
+    if (sidebarCollapsed) return;
+    const rafId = window.requestAnimationFrame(() => {
+      if (viewMode === 'markdown') {
+        textareaRef.current?.focus();
+        return;
+      }
+      focusContentEditableAtEnd(wysiwygRef.current);
+    });
+    return () => window.cancelAnimationFrame(rafId);
+  }, [currentArticleId, sidebarCollapsed, viewMode]);
 
   useEffect(() => {
     lastCursorRef.current = selection;

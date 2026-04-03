@@ -310,3 +310,24 @@ test('Browser tab title reflects current article and recording state', async ({ 
 
   await expect(page).toHaveTitle('Alpha title - FlowPaste');
 });
+
+test('Switching articles in Rich Text keeps the editor ready for typing', async ({ page }) => {
+  await page.goto('/');
+  const editor = page.getByTestId('editor');
+  await editor.fill('Alpha title\nFirst body');
+
+  await page.locator('.sidebar-header .btn.ghost.icon-only').click();
+  await page.locator('.sidebar-header .btn.primary.small').click();
+  await editor.fill('Beta title\nSecond body');
+
+  await page.getByTestId('rich-text-view-button').click();
+  await page.getByTestId('older-article-button').click();
+
+  const wysiwyg = page.getByTestId('wysiwyg-editor');
+  await expect(wysiwyg).toBeFocused();
+
+  await page.keyboard.type('!');
+  await page.getByTestId('markdown-view-button').click();
+
+  await expect(editor).toHaveValue('Alpha title First body!');
+});
