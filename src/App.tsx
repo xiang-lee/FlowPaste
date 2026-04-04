@@ -720,6 +720,13 @@ export default function App() {
     applyUndoSnapshot(undoSnapshotRef.current);
   };
 
+  const setUserText = (nextText: string) => {
+    if (undoSnapshotRef.current !== null && nextText !== text) {
+      setUndoSnapshot(null);
+    }
+    setText(nextText);
+  };
+
   const copyPlainTextToClipboard = async (value: string) => {
     if (navigator.clipboard?.writeText) {
       try {
@@ -1194,7 +1201,7 @@ export default function App() {
     if (suppressWysiwygInputRef.current) return;
     const html = wysiwygRef.current.innerHTML;
     const md = turndown.turndown(html);
-    setText(md);
+    setUserText(md);
     lastSyncedMdRef.current = md;
   };
 
@@ -1528,7 +1535,7 @@ export default function App() {
               className="editor"
               value={text}
               placeholder={t.ui.editorPlaceholder}
-              onChange={(e) => setText(e.target.value)}
+              onChange={(e) => setUserText(e.target.value)}
               onSelect={updateSelectionFromTextarea}
               onKeyUp={updateSelectionFromTextarea}
               onMouseUp={updateSelectionFromTextarea}
