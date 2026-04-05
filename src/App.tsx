@@ -374,16 +374,19 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (sidebarCollapsed) return;
     const rafId = window.requestAnimationFrame(() => {
       if (viewMode === 'markdown') {
-        textareaRef.current?.focus();
+        const textarea = textareaRef.current;
+        if (!textarea) return;
+        textarea.focus();
+        const end = textarea.value.length;
+        textarea.setSelectionRange(end, end);
         return;
       }
       focusContentEditableAtEnd(wysiwygRef.current);
     });
     return () => window.cancelAnimationFrame(rafId);
-  }, [currentArticleId, sidebarCollapsed, viewMode]);
+  }, [currentArticleId, viewMode]);
 
   useEffect(() => {
     lastCursorRef.current = selection;

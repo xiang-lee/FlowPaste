@@ -361,3 +361,20 @@ test('Switching articles in Rich Text keeps the editor ready for typing', async 
 
   await expect(editor).toHaveValue('Alpha title First body!');
 });
+
+test('Switching articles from header keeps Markdown editor ready for typing', async ({ page }) => {
+  await page.goto('/');
+  const editor = page.getByTestId('editor');
+  await editor.fill('Alpha title\nFirst body');
+
+  await page.locator('.sidebar-header .btn.ghost.icon-only').click();
+  await page.locator('.sidebar-header .btn.primary.small').click();
+  await editor.fill('Beta title\nSecond body');
+  await page.locator('.sidebar-header .btn.ghost.icon-only').click();
+
+  await page.getByTestId('older-article-button').click();
+  await expect(editor).toBeFocused();
+
+  await page.keyboard.type('!');
+  await expect(editor).toHaveValue('Alpha title\nFirst body!');
+});
