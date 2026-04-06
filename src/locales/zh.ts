@@ -31,7 +31,7 @@ ${text}`
     searchStatus: (current: number, total: number) => `第 ${current} / ${total} 条`,
     searchStatusEmpty: "0 条结果",
     untitled: "未命名",
-    deleteConfirm: "确定删除这篇文章吗？",
+    deleteConfirm: (title: string) => `确定删除“${title}”吗？`,
     minArticleWarning: "至少保留一篇文章",
     heroTitle: "语音转写，一键润色，创作永不中断",
     heroSubtitle: "录音、转写、修正、润色全流程一屏搞定。无需频繁复制粘贴，多文档轻松切换，数据本地存储，安全更私密。",

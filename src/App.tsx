@@ -597,7 +597,9 @@ export default function App() {
       showToast(t.ui.minArticleWarning, 'error');
       return;
     }
-    if (!window.confirm(t.ui.deleteConfirm)) return;
+    const targetArticle = articles.find((article) => article.id === id);
+    const articleTitle = targetArticle?.title || t.ui.untitled;
+    if (!window.confirm(t.ui.deleteConfirm(articleTitle))) return;
 
     const previousArticles = articles;
     const previousCurrentArticleId = currentArticleId;

@@ -92,7 +92,10 @@ test.describe('Article Management', () => {
     await editor.fill('To delete');
     
     // Confirm dialog
-    page.on('dialog', dialog => dialog.accept());
+    page.on('dialog', (dialog) => {
+      expect(dialog.message()).toContain('To delete');
+      return dialog.accept();
+    });
     
     // Hover over the first article (the active one "To delete") to show delete button
     const firstArticle = page.locator('.article-item').first();

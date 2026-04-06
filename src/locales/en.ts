@@ -31,7 +31,7 @@ ${text}`
     searchStatus: (current: number, total: number) => `${current} / ${total} matches`,
     searchStatusEmpty: "0 matches",
     untitled: "Untitled",
-    deleteConfirm: "Delete this article?",
+    deleteConfirm: (title: string) => `Delete "${title}"?`,
     minArticleWarning: "Keep at least one article",
     heroTitle: "Voice to Text, Instant Polish, Uninterrupted Flow",
     heroSubtitle: "Record, transcribe, fix, and polish in one screen. No copy-pasting, easy switching, local storage, private and secure.",
