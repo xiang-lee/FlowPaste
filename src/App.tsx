@@ -159,6 +159,12 @@ function filename(value: string) {
   return safe || 'flowpaste';
 }
 
+function formatDuration(totalSeconds: number) {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+}
+
 function focusContentEditableAtEnd(element: HTMLElement | null) {
   if (!element) return;
   element.focus();
@@ -298,6 +304,7 @@ export default function App() {
   const undoSnapshotRef = useRef<string | null>(null);
   const [focusMode, setFocusMode] = useState(false);
   const [recordingState, setRecordingState] = useState<RecordingState>('idle');
+  const [recordingElapsedSeconds, setRecordingElapsedSeconds] = useState(0);
   const [actionState, setActionState] = useState<'idle' | 'processing'>('idle');
   const [activeAction, setActiveAction] = useState<ActionType | null>(null);
   const currentWindowStatus =
@@ -451,6 +458,19 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem(VIEW_MODE_KEY, viewMode);
   }, [viewMode]);
+
+  useEffect(() => {
+    if (recordingState !== 'recording') {
+      setRecordingElapsedSeconds(0);
+      return;
+    }
+    const startedAt = Date.now();
+    setRecordingElapsedSeconds(0);
+    const intervalId = window.setInterval(() => {
+      setRecordingElapsedSeconds(Math.floor((Date.now() - startedAt) / 1000));
+    }, 250);
+    return () => window.clearInterval(intervalId);
+  }, [recordingState]);
 
   useEffect(() => {
     const parts = ['FlowPaste'];
@@ -1709,6 +1729,11 @@ export default function App() {
                     ? t.ui.errorStatus
                     : t.ui.idleStatus}
             </span>
+            {recordingState === 'recording' && (
+              <span className="timer-chip" data-testid="recording-timer">
+                {formatDuration(recordingElapsedSeconds)}
+              </span>
+            )}
             {selectionSize > 0 && (
               <span className="selection-chip" data-testid="selection-chip">
                 {t.ui.selectionStatus(selectionSize)}

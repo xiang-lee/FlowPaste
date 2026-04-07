@@ -62,6 +62,25 @@ test('录音状态机：开始→停止→转写→成功', async ({ page }) => 
   await expect(statusDot).toHaveAttribute('aria-label', 'idle');
 });
 
+test('录音时会显示经过时间', async ({ page }) => {
+  await page.route(transcriptionRoute, async (route) => {
+    await route.fulfill({ json: { text: 'done' } });
+  });
+
+  await page.goto('/');
+  const recordButton = page.getByTestId('record-button');
+  const timer = page.getByTestId('recording-timer');
+
+  await recordButton.click();
+  await expect(timer).toHaveText('00:00');
+
+  await page.waitForTimeout(1100);
+  await expect(timer).toHaveText('00:01');
+
+  await recordButton.click();
+  await expect(timer).toHaveCount(0);
+});
+
 test('转写插入在光标处', async ({ page }) => {
   await page.route(transcriptionRoute, (route) => route.fulfill({ json: { text: ' world' } }));
   await page.goto('/');

@@ -650,6 +650,19 @@
   font-size: 12px;
 }
 
+.timer-chip {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(255, 179, 71, 0.14);
+  color: var(--text);
+  border: 1px solid rgba(255, 179, 71, 0.3);
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-weight: 700;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
 .stats-chip {
   display: inline-flex;
   align-items: center;
