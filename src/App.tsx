@@ -301,6 +301,7 @@ export default function App() {
 
   const [selection, setSelection] = useState({ start: 0, end: 0 });
   const [undoSnapshot, setUndoSnapshot] = useState<string | null>(null);
+  const textRef = useRef(text);
   const undoSnapshotRef = useRef<string | null>(null);
   const [focusMode, setFocusMode] = useState(false);
   const [recordingState, setRecordingState] = useState<RecordingState>('idle');
@@ -398,6 +399,10 @@ export default function App() {
   useEffect(() => {
     lastCursorRef.current = selection;
   }, [selection]);
+
+  useEffect(() => {
+    textRef.current = text;
+  }, [text]);
 
   useEffect(() => {
     undoSnapshotRef.current = undoSnapshot;
@@ -1011,6 +1016,7 @@ export default function App() {
       const data = await res.json();
       const transcript: string = data?.text || data?.transcript || '';
       if (!transcript) throw new Error(t.ui.toast.noTranscript);
+      setUndoSnapshot(textRef.current);
       setText((prev) => {
         const [start, end] = clampRange(lastCursorRef.current.start, lastCursorRef.current.end, prev.length);
         const next = `${prev.slice(0, start)}${transcript}${prev.slice(end)}`;

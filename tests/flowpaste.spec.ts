@@ -99,6 +99,30 @@ test('转写插入在光标处', async ({ page }) => {
   await expect(editor).toHaveValue('Hel worldlo');
 });
 
+test('转写插入后可以用 Undo 回退', async ({ page }) => {
+  await page.route(transcriptionRoute, (route) => route.fulfill({ json: { text: ' world' } }));
+  await page.goto('/');
+
+  const editor = page.getByTestId('editor');
+  const undoButton = page.getByTestId('undo-button');
+  await editor.fill('Hello');
+  await editor.evaluate((el) => {
+    el.focus();
+    // @ts-expect-error test directly uses selection API on textarea
+    el.setSelectionRange(5, 5);
+  });
+
+  const recordButton = page.getByTestId('record-button');
+  await recordButton.click();
+  await recordButton.click();
+
+  await expect(editor).toHaveValue('Hello world');
+  await expect(undoButton).toBeEnabled();
+
+  await undoButton.click();
+  await expect(editor).toHaveValue('Hello');
+});
+
 test('Fix 主路径 + 撤销', async ({ page }) => {
   await page.route(completionRoute, (route) =>
     route.fulfill({
