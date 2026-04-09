@@ -242,6 +242,32 @@ test('失败路径：401 与网络错误保持正文不变并提示', async ({ p
   await expect(editor).toHaveValue('text to fix');
 });
 
+test('Fix 失败后可以直接重试', async ({ page }) => {
+  let attempts = 0;
+  await page.route(completionRoute, (route) => {
+    attempts += 1;
+    if (attempts === 1) {
+      return route.abort('internetdisconnected');
+    }
+    return route.fulfill({
+      contentType: 'text/event-stream',
+      body: `data: {"choices":[{"delta":{"content":"Polished retry text"}}]}\n\ndata: [DONE]\n\n`,
+    });
+  });
+
+  await page.goto('/');
+  const editor = page.getByTestId('editor');
+  await editor.fill('retry me');
+
+  await page.getByTestId('fix-button').click();
+  const toast = page.getByTestId('toast');
+  await expect(toast).toBeVisible();
+  await expect(editor).toHaveValue('retry me');
+
+  await toast.getByRole('button', { name: 'Retry' }).click();
+  await expect(editor).toHaveValue('Polished retry text');
+});
+
 test('长文本策略：无选区会提示确认', async ({ page }) => {
   await page.route(completionRoute, (route) =>
     route.fulfill({

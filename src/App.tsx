@@ -1175,7 +1175,12 @@ export default function App() {
           : error instanceof Error
             ? error.message
             : t.ui.toast.fail;
-      showToast(message, 'error');
+      showToast(message, 'error', {
+        label: t.ui.toast.retry,
+        onClick: () => {
+          void runTextAction(action);
+        },
+      });
       setText(currentSnapshot);
     } finally {
       chatAbortRef.current = null;
