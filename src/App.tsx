@@ -1178,7 +1178,7 @@ export default function App() {
       showToast(message, 'error', {
         label: t.ui.toast.retry,
         onClick: () => {
-          void runTextAction(action);
+          runTextActionRef.current(action);
         },
       });
       setText(currentSnapshot);

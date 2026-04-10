@@ -268,6 +268,40 @@ test('Fix 失败后可以直接重试', async ({ page }) => {
   await expect(editor).toHaveValue('Polished retry text');
 });
 
+test('Retry 会使用失败后最新的正文内容', async ({ page }) => {
+  let attempts = 0;
+  await page.route(completionRoute, async (route) => {
+    attempts += 1;
+    if (attempts === 1) {
+      return route.abort('internetdisconnected');
+    }
+
+    const payload = route.request().postDataJSON() as {
+      messages?: Array<{ role?: string; content?: string }>;
+    };
+    const userPrompt = payload.messages?.find((message) => message.role === 'user')?.content || '';
+    const nextText = userPrompt.includes('retry me updated') ? 'Updated retry text' : 'Stale retry text';
+
+    return route.fulfill({
+      contentType: 'text/event-stream',
+      body: `data: {"choices":[{"delta":{"content":"${nextText}"}}]}\n\ndata: [DONE]\n\n`,
+    });
+  });
+
+  await page.goto('/');
+  const editor = page.getByTestId('editor');
+  await editor.fill('retry me');
+
+  await page.getByTestId('fix-button').click();
+  const toast = page.getByTestId('toast');
+  await expect(toast).toBeVisible();
+
+  await editor.fill('retry me updated');
+  await toast.getByRole('button', { name: 'Retry' }).click();
+
+  await expect(editor).toHaveValue('Updated retry text');
+});
+
 test('长文本策略：无选区会提示确认', async ({ page }) => {
   await page.route(completionRoute, (route) =>
     route.fulfill({
