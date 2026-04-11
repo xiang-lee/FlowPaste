@@ -528,12 +528,12 @@ export default function App() {
   }, [actionsMenuOpen]);
 
   useEffect(() => {
-    if (sidebarCollapsed || !pendingSearchFocusRef.current) return;
+    if (focusMode || sidebarCollapsed || !pendingSearchFocusRef.current) return;
     if (!searchInputRef.current) return;
     searchInputRef.current.focus();
     searchInputRef.current.select();
     pendingSearchFocusRef.current = false;
-  }, [sidebarCollapsed]);
+  }, [focusMode, sidebarCollapsed]);
 
   const handleNewArticle = () => {
     const newId = Date.now().toString();
@@ -578,10 +578,14 @@ export default function App() {
 
   const focusArticleSearch = () => {
     pendingSearchFocusRef.current = true;
+    if (focusMode) {
+      setFocusMode(false);
+    }
     if (sidebarCollapsed) {
       setSidebarCollapsed(false);
       return;
     }
+    if (focusMode) return;
     searchInputRef.current?.focus();
     searchInputRef.current?.select();
     pendingSearchFocusRef.current = false;

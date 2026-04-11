@@ -268,6 +268,21 @@ test.describe('Article Management', () => {
     await expect(page.locator('.article-item').first()).toContainText('Alpha note');
   });
 
+  test('Focus Mode: Ctrl+K exits focus and opens article search', async ({ page }) => {
+    const focusButton = page.getByTestId('focus-button');
+    await focusButton.click();
+    await expect(focusButton).toHaveText(/Exit Focus|退出专注/);
+
+    await page.keyboard.press('Control+K');
+
+    const sidebar = page.locator('.sidebar');
+    const search = page.getByTestId('article-search-input');
+    await expect(focusButton).toHaveText(/Focus Mode|专注模式/);
+    await expect(sidebar).not.toHaveClass(/collapsed/);
+    await expect(search).toBeVisible();
+    await expect(search).toBeFocused();
+  });
+
   test('Sidebar: Enter opens the first filtered article', async ({ page }) => {
     await page.locator('.sidebar-header .btn.ghost.icon-only').click();
 
