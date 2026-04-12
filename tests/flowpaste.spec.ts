@@ -144,6 +144,29 @@ test('Fix 主路径 + 撤销', async ({ page }) => {
   await expect(editor).toHaveValue('Ths is bad.');
 });
 
+test('Ctrl+Z 可以撤销最近一次 AI 修改', async ({ page }) => {
+  await page.route(completionRoute, (route) =>
+    route.fulfill({
+      contentType: 'text/event-stream',
+      body: `data: {"choices":[{"delta":{"content":"This"}}]}\n\ndata: [DONE]\n\n`,
+    }),
+  );
+  await page.goto('/');
+  const editor = page.getByTestId('editor');
+  await editor.fill('Ths is bad.');
+  await editor.evaluate((el) => {
+    el.focus();
+    // @ts-expect-error test directly uses selection API on textarea
+    el.setSelectionRange(0, 3);
+  });
+
+  await page.getByTestId('fix-button').click();
+  await expect(editor).toHaveValue('This is bad.');
+
+  await page.keyboard.press('Control+Z');
+  await expect(editor).toHaveValue('Ths is bad.');
+});
+
 test('Polish 主路径 + 撤销', async ({ page }) => {
   await page.route(completionRoute, (route) =>
     route.fulfill({

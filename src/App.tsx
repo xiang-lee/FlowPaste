@@ -334,6 +334,7 @@ export default function App() {
       fix: formatAction('F'),
       polish: formatAction('P'),
       search: formatPrimary('K'),
+      undo: formatPrimary('Z'),
     };
   }, [isMac]);
   const wysiwygRef = useRef<HTMLDivElement | null>(null);
@@ -1330,6 +1331,11 @@ export default function App() {
         focusArticleSearch();
         return;
       }
+      if (matchesPrimaryShortcut(event, 'z') && undoSnapshotRef.current) {
+        event.preventDefault();
+        applyUndoSnapshot(undoSnapshotRef.current);
+        return;
+      }
       if (matchesShortcut(event, 'f')) {
         event.preventDefault();
         runTextActionRef.current('fix');
@@ -1660,6 +1666,8 @@ export default function App() {
               className={`btn ${undoSnapshot ? '' : 'disabled'}`}
               disabled={!undoSnapshot}
               onClick={handleUndo}
+              title={`Shortcut: ${shortcutHints.undo}`}
+              aria-keyshortcuts={isMac ? 'Meta+Z' : 'Control+Z'}
             >
               {t.ui.undo}
             </button>
