@@ -130,6 +130,28 @@ test.describe('Article Management', () => {
     await expect(editor).toHaveValue('Delete me');
   });
 
+  test('Actions menu: Delete current article', async ({ page }) => {
+    const editor = page.getByTestId('editor');
+    await editor.fill('To keep');
+
+    await page.locator('.sidebar-header .btn.ghost.icon-only').click();
+    await page.locator('.sidebar-header .btn.primary.small').click();
+    await editor.fill('Delete from menu');
+    await page.locator('.sidebar-header .btn.ghost.icon-only').click();
+
+    page.on('dialog', (dialog) => {
+      expect(dialog.message()).toContain('Delete from menu');
+      return dialog.accept();
+    });
+
+    await page.getByTestId('actions-menu-button').click();
+    await page.getByTestId('delete-current-article-button').click();
+
+    await expect(editor).toHaveValue('To keep');
+    await page.locator('.sidebar-header .btn.ghost.icon-only').click();
+    await expect(page.locator('.article-item')).toHaveCount(1);
+  });
+
   test('Sidebar: Collapse toggle', async ({ page }) => {
     const sidebar = page.locator('.sidebar');
     const toggle = page.locator('.sidebar-header .btn.ghost.icon-only');

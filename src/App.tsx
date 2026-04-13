@@ -621,8 +621,7 @@ export default function App() {
     }
   };
 
-  const handleDeleteArticle = (e: React.MouseEvent, id: string) => {
-    e.stopPropagation();
+  const deleteArticleById = (id: string) => {
     if (articles.length <= 1) {
       showToast(t.ui.minArticleWarning, 'error');
       return;
@@ -634,7 +633,7 @@ export default function App() {
     const previousArticles = articles;
     const previousCurrentArticleId = currentArticleId;
     const previousText = text;
-    const newArticles = articles.filter(a => a.id !== id);
+    const newArticles = articles.filter((article) => article.id !== id);
     setArticles(newArticles);
 
     if (currentArticleId === id) {
@@ -654,6 +653,11 @@ export default function App() {
         setUndoSnapshot(null);
       },
     });
+  };
+
+  const handleDeleteArticle = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    deleteArticleById(id);
   };
 
   const baseHeaders = useMemo(() => {
@@ -1734,6 +1738,18 @@ export default function App() {
                       title={t.ui.duplicate}
                     >
                       {t.ui.duplicate}
+                    </button>
+                    <button
+                      data-testid="delete-current-article-button"
+                      className={`btn ghost small menu-button ${articles.length <= 1 ? 'disabled' : ''}`}
+                      onClick={() => {
+                        setActionsMenuOpen(false);
+                        deleteArticleById(currentArticleId);
+                      }}
+                      disabled={articles.length <= 1}
+                      title={t.ui.delete}
+                    >
+                      {t.ui.delete}
                     </button>
                   </div>
                 </div>
