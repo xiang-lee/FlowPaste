@@ -1729,6 +1729,17 @@ export default function App() {
                   <div className="menu-section">
                     <span className="menu-label">{t.ui.documentGroup}</span>
                     <button
+                      data-testid="new-article-menu-button"
+                      className="btn ghost small menu-button"
+                      onClick={() => {
+                        setActionsMenuOpen(false);
+                        handleNewArticle();
+                      }}
+                      title={t.ui.new}
+                    >
+                      {t.ui.new}
+                    </button>
+                    <button
                       data-testid="duplicate-article-button"
                       className="btn ghost small menu-button"
                       onClick={() => {

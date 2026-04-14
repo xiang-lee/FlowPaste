@@ -152,6 +152,22 @@ test.describe('Article Management', () => {
     await expect(page.locator('.article-item')).toHaveCount(1);
   });
 
+  test('Actions menu: Create new article while sidebar is collapsed', async ({ page }) => {
+    const editor = page.getByTestId('editor');
+    await editor.fill('Existing article');
+
+    const sidebar = page.locator('.sidebar');
+    await expect(sidebar).toHaveClass(/collapsed/);
+
+    await page.getByTestId('actions-menu-button').click();
+    await page.getByTestId('new-article-menu-button').click();
+
+    await expect(editor).toHaveValue('');
+
+    await page.locator('.sidebar-header .btn.ghost.icon-only').click();
+    await expect(page.locator('.article-item')).toHaveCount(2);
+  });
+
   test('Sidebar: Collapse toggle', async ({ page }) => {
     const sidebar = page.locator('.sidebar');
     const toggle = page.locator('.sidebar-header .btn.ghost.icon-only');
