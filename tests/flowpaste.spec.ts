@@ -81,6 +81,27 @@ test('录音时会显示经过时间', async ({ page }) => {
   await expect(timer).toHaveCount(0);
 });
 
+test('转写中按 Escape 可以取消', async ({ page }) => {
+  await page.route(transcriptionRoute, async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    await route.fulfill({ json: { text: 'should not insert' } });
+  });
+
+  await page.goto('/');
+  const recordButton = page.getByTestId('record-button');
+  const statusDot = page.getByTestId('recording-status');
+  const editor = page.getByTestId('editor');
+
+  await recordButton.click();
+  await recordButton.click();
+  await expect(statusDot).toHaveAttribute('aria-label', 'transcribing');
+
+  await page.keyboard.press('Escape');
+
+  await expect(statusDot).toHaveAttribute('aria-label', 'idle');
+  await expect(editor).toHaveValue('');
+});
+
 test('转写插入在光标处', async ({ page }) => {
   await page.route(transcriptionRoute, (route) => route.fulfill({ json: { text: ' world' } }));
   await page.goto('/');
@@ -181,6 +202,26 @@ test('Polish 主路径 + 撤销', async ({ page }) => {
   await expect(editor).toHaveValue('Polished text body');
   await page.getByTestId('undo-button').click();
   await expect(editor).toHaveValue('rough text');
+});
+
+test('处理中按 Escape 可以取消 Fix', async ({ page }) => {
+  await page.route(completionRoute, async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    await route.fulfill({
+      contentType: 'text/event-stream',
+      body: `data: {"choices":[{"delta":{"content":"Should not apply"}}]}\n\ndata: [DONE]\n\n`,
+    });
+  });
+
+  await page.goto('/');
+  const editor = page.getByTestId('editor');
+  await editor.fill('text to keep');
+
+  await page.getByTestId('fix-button').click();
+  await page.keyboard.press('Escape');
+
+  await expect(editor).toHaveValue('text to keep');
+  await expect(page.getByTestId('recording-status')).toHaveAttribute('aria-label', 'idle');
 });
 
 test('手动修改后会清除过期的 AI Undo', async ({ page }) => {

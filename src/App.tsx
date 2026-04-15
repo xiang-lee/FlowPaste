@@ -577,21 +577,6 @@ export default function App() {
     searchInputRef.current?.focus();
   };
 
-  const focusArticleSearch = () => {
-    pendingSearchFocusRef.current = true;
-    if (focusMode) {
-      setFocusMode(false);
-    }
-    if (sidebarCollapsed) {
-      setSidebarCollapsed(false);
-      return;
-    }
-    if (focusMode) return;
-    searchInputRef.current?.focus();
-    searchInputRef.current?.select();
-    pendingSearchFocusRef.current = false;
-  };
-
   const revealCurrentArticle = () => {
     if (focusMode) setFocusMode(false);
     setSidebarCollapsed(false);
@@ -1320,6 +1305,19 @@ export default function App() {
     };
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.repeat) return;
+      if (event.key === 'Escape' && recordingState === 'transcribing') {
+        event.preventDefault();
+        cancelledByUserRef.current = true;
+        transcribeAbortRef.current?.abort();
+        setRecordingState('idle');
+        setToast({ id: Date.now(), message: t.ui.toast.cancelTranscribing, kind: 'info' });
+        return;
+      }
+      if (event.key === 'Escape' && actionState === 'processing' && activeAction) {
+        event.preventDefault();
+        runTextActionRef.current(activeAction);
+        return;
+      }
       if (event.key === 'Escape' && focusMode) {
         event.preventDefault();
         setFocusMode(false);
@@ -1332,12 +1330,25 @@ export default function App() {
       }
       if (matchesPrimaryShortcut(event, 'k')) {
         event.preventDefault();
-        focusArticleSearch();
+        pendingSearchFocusRef.current = true;
+        if (focusMode) {
+          setFocusMode(false);
+        }
+        if (sidebarCollapsed) {
+          setSidebarCollapsed(false);
+          return;
+        }
+        if (focusMode) return;
+        searchInputRef.current?.focus();
+        searchInputRef.current?.select();
+        pendingSearchFocusRef.current = false;
         return;
       }
       if (matchesPrimaryShortcut(event, 'z') && undoSnapshotRef.current) {
         event.preventDefault();
-        applyUndoSnapshot(undoSnapshotRef.current);
+        setText(undoSnapshotRef.current);
+        setUndoSnapshot(null);
+        setToast({ id: Date.now(), message: t.ui.toast.undo, kind: 'info' });
         return;
       }
       if (matchesShortcut(event, 'f')) {
@@ -1352,7 +1363,7 @@ export default function App() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [focusMode, isMac, sidebarCollapsed]);
+  }, [actionState, activeAction, focusMode, isMac, recordingState, sidebarCollapsed, t.ui.toast.cancelTranscribing, t.ui.toast.undo]);
 
   return (
     <div className={`app-shell ${focusMode ? 'focus' : ''}`}>
