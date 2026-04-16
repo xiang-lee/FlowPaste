@@ -1363,7 +1363,7 @@ export default function App() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [actionState, activeAction, focusMode, isMac, recordingState, sidebarCollapsed, t.ui.toast.cancelTranscribing, t.ui.toast.undo]);
+  }, [actionState, activeAction, focusMode, isMac, recordingState, setToast, sidebarCollapsed, t.ui.toast.cancelTranscribing, t.ui.toast.undo]);
 
   return (
     <div className={`app-shell ${focusMode ? 'focus' : ''}`}>
@@ -1795,8 +1795,13 @@ export default function App() {
                 {formatDuration(recordingElapsedSeconds)}
               </span>
             )}
+            {text.length > 0 && selectionSize === 0 && (
+              <span className="scope-chip" data-testid="processing-scope-chip">
+                {t.ui.fullDocumentStatus}
+              </span>
+            )}
             {selectionSize > 0 && (
-              <span className="selection-chip" data-testid="selection-chip">
+              <span className="selection-chip" data-testid="processing-scope-chip">
                 {t.ui.selectionStatus(selectionSize)}
               </span>
             )}

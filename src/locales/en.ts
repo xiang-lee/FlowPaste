@@ -69,6 +69,7 @@ ${text}`
     liveFixing: "Fixing, please wait...",
     livePolishing: "Polishing, please wait...",
     liveRecording: "Recording, click Stop to transcribe",
+    fullDocumentStatus: "Full document",
     selectionStatus: (count: number) => `Selected ${count} chars`,
     documentStats: (chars: number, lines: number) => `${chars} chars · ${lines} line${lines === 1 ? '' : 's'}`,
     duplicateTitle: (title: string) => `${title} (copy)`,

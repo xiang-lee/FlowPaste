@@ -69,6 +69,7 @@ ${text}`
     liveFixing: "正在 Fix，稍等...",
     livePolishing: "正在 Polish，稍等...",
     liveRecording: "录音中，点击停止以转写",
+    fullDocumentStatus: "整篇文稿",
     selectionStatus: (count: number) => `已选 ${count} 字`,
     documentStats: (chars: number, lines: number) => `${chars} 字 · ${lines} 行`,
     duplicateTitle: (title: string) => `${title} (副本)`,

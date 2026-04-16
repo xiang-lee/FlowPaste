@@ -459,9 +459,11 @@ test('Selection size is shown when text is highlighted', async ({ page }) => {
   await page.goto('/');
   const editor = page.getByTestId('editor');
   await editor.fill('Hello world');
+  await expect(page.getByTestId('processing-scope-chip')).toHaveText('Full document');
+
   await editor.selectText();
 
-  await expect(page.getByTestId('selection-chip')).toHaveText('Selected 11 chars');
+  await expect(page.getByTestId('processing-scope-chip')).toHaveText('Selected 11 chars');
 });
 
 test('Ctrl+S downloads the current markdown file', async ({ page }) => {
