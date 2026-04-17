@@ -485,7 +485,7 @@ test('Document stats show current character and line counts', async ({ page }) =
   const editor = page.getByTestId('editor');
   await editor.fill('Hello\nWorld');
 
-  await expect(page.getByTestId('document-stats')).toHaveText('11 chars · 2 lines');
+  await expect(page.getByTestId('document-stats')).toHaveText('11 chars · 2 lines · 2 words');
 });
 
 test('Browser tab title reflects current article and recording state', async ({ page }) => {

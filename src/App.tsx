@@ -165,6 +165,22 @@ function formatDuration(totalSeconds: number) {
   return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 }
 
+function countWords(value: string, locale: string) {
+  const text = value.trim();
+  if (!text) return 0;
+
+  if (typeof Intl !== 'undefined' && 'Segmenter' in Intl) {
+    const segmenter = new Intl.Segmenter(locale, { granularity: 'word' });
+    let count = 0;
+    for (const segment of segmenter.segment(text)) {
+      if (segment.isWordLike) count += 1;
+    }
+    return count;
+  }
+
+  return text.split(/\s+/).filter(Boolean).length;
+}
+
 function focusContentEditableAtEnd(element: HTMLElement | null) {
   if (!element) return;
   element.focus();
@@ -1215,6 +1231,7 @@ export default function App() {
     actionState === 'processing';
   const canCopy = text.trim().length > 0;
   const lineCount = text ? text.split('\n').length : 0;
+  const wordCount = countWords(text, lang);
   const [selectionStart, selectionEnd] = clampRange(selection.start, selection.end, text.length);
   const selectionSize = selectionEnd - selectionStart;
 
@@ -1807,7 +1824,7 @@ export default function App() {
             )}
             {text.length > 0 && (
               <span className="stats-chip" data-testid="document-stats">
-                {t.ui.documentStats(text.length, lineCount)}
+                {t.ui.documentStats(text.length, lineCount, wordCount)}
               </span>
             )}
             {liveStatusText() && (

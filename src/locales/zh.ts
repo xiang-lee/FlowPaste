@@ -71,7 +71,7 @@ ${text}`
     liveRecording: "录音中，点击停止以转写",
     fullDocumentStatus: "整篇文稿",
     selectionStatus: (count: number) => `已选 ${count} 字`,
-    documentStats: (chars: number, lines: number) => `${chars} 字 · ${lines} 行`,
+    documentStats: (chars: number, lines: number, words: number) => `${chars} 字 · ${lines} 行 · ${words} 词`,
     duplicateTitle: (title: string) => `${title} (副本)`,
     toast: {
       undo: "已撤销上次修改",
