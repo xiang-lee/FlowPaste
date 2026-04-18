@@ -168,6 +168,19 @@ test.describe('Article Management', () => {
     await expect(page.locator('.article-item')).toHaveCount(2);
   });
 
+  test('Actions menu: Open article search while sidebar is collapsed', async ({ page }) => {
+    const sidebar = page.locator('.sidebar');
+    await expect(sidebar).toHaveClass(/collapsed/);
+
+    await page.getByTestId('actions-menu-button').click();
+    await page.getByTestId('search-articles-menu-button').click();
+
+    const search = page.getByTestId('article-search-input');
+    await expect(sidebar).not.toHaveClass(/collapsed/);
+    await expect(search).toBeVisible();
+    await expect(search).toBeFocused();
+  });
+
   test('Sidebar: Collapse toggle', async ({ page }) => {
     const sidebar = page.locator('.sidebar');
     const toggle = page.locator('.sidebar-header .btn.ghost.icon-only');

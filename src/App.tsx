@@ -593,6 +593,21 @@ export default function App() {
     searchInputRef.current?.focus();
   };
 
+  const openArticleSearchFromActions = () => {
+    pendingSearchFocusRef.current = true;
+    if (focusMode) {
+      setFocusMode(false);
+    }
+    if (sidebarCollapsed) {
+      setSidebarCollapsed(false);
+      return;
+    }
+    if (focusMode) return;
+    searchInputRef.current?.focus();
+    searchInputRef.current?.select();
+    pendingSearchFocusRef.current = false;
+  };
+
   const revealCurrentArticle = () => {
     if (focusMode) setFocusMode(false);
     setSidebarCollapsed(false);
@@ -1756,6 +1771,17 @@ export default function App() {
                   </div>
                   <div className="menu-section">
                     <span className="menu-label">{t.ui.documentGroup}</span>
+                    <button
+                      data-testid="search-articles-menu-button"
+                      className="btn ghost small menu-button"
+                      onClick={() => {
+                        setActionsMenuOpen(false);
+                        openArticleSearchFromActions();
+                      }}
+                      title={t.ui.articleSearchPlaceholder}
+                    >
+                      {t.ui.articleSearchPlaceholder}
+                    </button>
                     <button
                       data-testid="new-article-menu-button"
                       className="btn ghost small menu-button"
